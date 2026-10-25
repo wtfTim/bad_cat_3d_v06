@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "walls": {
+    "original-484": {
+      "x": 39.92570846636728,
+      "z": -27.47517190305986,
+      "y": 1.3877787807814457e-17,
+      "length": 5.1,
+      "height": 3.4,
+      "thickness": 0.22,
+      "rotation": 3.141592653589793,
+      "opening": "none",
+      "openingWidth": 1.2,
+      "openingHeight": 2.2,
+      "sill": 1
+    },
+    "original-483": {
+      "x": 31.544134055398604,
+      "z": -27.431654269313857,
+      "y": 0,
+      "length": 4.3,
+      "height": 3.4,
+      "thickness": 0.22,
+      "rotation": 0,
+      "opening": "none",
+      "openingWidth": 1.2,
+      "openingHeight": 2.2,
+      "sill": 1
+    }
+  }
+}
