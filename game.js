@@ -738,7 +738,7 @@ editorPanel.innerHTML=`<header>🛠️ Редактор мира <button id="edT
  <label>Низ окна <input id="edWallSill" type="number" min="0" max="6" step=".1" value="1" style="width:65px"></label></div>
  <div class="edLine"><button id="edWallApply">✅ Применить</button><button id="edWallRotate">↻ Повернуть 90°</button></div>
  <div class="edLine"><button id="edWallLeft">←</button><button id="edWallRight">→</button><button id="edWallForward">↑</button><button id="edWallBack">↓</button><button id="edWallUp">+5 см</button><button id="edWallDown">−5 см</button></div>
- <div class="edLine"><button id="edWallReset">↶ Вернуть / удалить стену</button><button id="edWallSave">💾 Сохранить стены</button></div>
+ <div class="edLine"><button id="edWallReset">↶ Вернуть / удалить стену</button><button id="edWallSave">💾 Сохранить стены</button><button id="edWallExport">⬇ Стены JSON</button></div>
  </div>`;
 document.body.append(editorPanel);
 const editorButton=document.createElement('button');editorButton.id='editorButton';editorButton.textContent='🛠️ Мебель';document.body.append(editorButton);
@@ -837,6 +837,8 @@ const wallMat=material('#efe1c8');
 const wallField=(id)=>document.getElementById('edWall'+id);
 function saveEditedWalls(){
  const changes={};for(const [id,record] of wallEdits)changes[id]=record;
+ const old=localStorage.getItem(WALL_SAVE_KEY);
+ if(old)localStorage.setItem(WALL_SAVE_KEY+'-last-backup',old);
  localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(changes));
 }
 function wallRemoveParts(record){
@@ -1007,7 +1009,15 @@ wallField('Reset').onclick=()=>{
  if(base){base.originalMesh.parent||house.add(base.originalMesh);if(!wallMeshes.includes(base.originalMesh))wallMeshes.push(base.originalMesh);if(!colliders.includes(base.originalCollider))colliders.push(base.originalCollider);}
  wallEdits.delete(id);wallRecords.delete(id);wallPick(null);saveEditedWalls();
 };
-wallField('Save').onclick=()=>{saveEditedWalls();toast('💾 Стены сохранены отдельно от мебели')};
+wallField('Save').onclick=()=>{saveEditedWalls();toast('💾 Стены сохранены. Для переноса на телефон экспортируй JSON участка')};
+wallField('Export').onclick=()=>{
+ saveEditedWalls();
+ const payload={version:1,walls:JSON.parse(localStorage.getItem(WALL_SAVE_KEY)||'{}')};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='badcat_walls.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+ toast('🧱 Скачан файл стен. Экспорт всего участка также содержит стены.');
+};
 
 wallRestoreAll();
 function syncEditorLabel(){document.getElementById('edSelected').textContent=editSelected?`${editSelected.description} · X ${editSelected.holder.position.x.toFixed(1)} · Z ${editSelected.holder.position.z.toFixed(1)} · Y ${editSelected.holder.position.y.toFixed(2)} · Размер ${Math.round(editSelected.holder.scale.x*100)}%`:'Нажми на любую мебель в сцене';}
@@ -1087,7 +1097,7 @@ async function addCatalogItem(key,restore=null,id=null){
  else {piece=await placeGarden([pack,name,catalogLabel(key),x,z,w,d,h,restore?.rot||0,tree?'':'knock',!decor&&!tree],editId);piece.holder.position.y=floor;refreshEditBounds(piece)}
  if(restore?.hidden){piece.removed=true;piece.holder.visible=false;refreshEditBounds(piece)}return piece;
 }
-function exportFurniture(){saveFurniture();const data={version:1,layout:JSON.parse(localStorage.getItem(EDIT_SAVE_KEY)),custom:customEntries};const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='badcat_furniture_layout.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+function exportFurniture(){saveFurniture();saveEditedWalls();const data={version:2,layout:JSON.parse(localStorage.getItem(EDIT_SAVE_KEY)),custom:customEntries,walls:JSON.parse(localStorage.getItem(WALL_SAVE_KEY)||'{}')};const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='badcat_estate_layout_with_walls.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 document.getElementById('edExport').onclick=exportFurniture;
 let customEntries=[];
 const originalAdd=addCatalogItem;
@@ -1356,7 +1366,12 @@ async function loadExtras(){
   throw Error('Не загрузились '+missingFurnitureModels.length+' предметов: '+missingFurnitureModels.slice(0,3).join(', '));
  }
 }
-document.getElementById('edImportFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed.layout||typeof parsed.layout!=='object'||!Array.isArray(parsed.custom))throw Error('Invalid format');localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));location.reload()}catch(err){toast('⚠️ Неверный файл JSON');console.error(err)}};
+document.getElementById('edImportFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed.layout||typeof parsed.layout!=='object'||!Array.isArray(parsed.custom))throw Error('Invalid format');
+ const previous=localStorage.getItem(WALL_SAVE_KEY);
+ if(previous)localStorage.setItem(WALL_SAVE_KEY+'-backup-before-import',previous);
+ localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));
+ if(parsed.walls&&typeof parsed.walls==='object'&&!Array.isArray(parsed.walls))localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(parsed.walls));
+ location.reload()}catch(err){toast('⚠️ Неверный файл JSON');console.error(err)}};
 document.getElementById('edReset').onclick=()=>{
  if(!confirm('Восстановить твою сохранённую в проекте расстановку (416 объектов)? Текущие перемещения заменятся, прогресс квестов останется.'))return;
  const before=localStorage.getItem(EDIT_SAVE_KEY),extras=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
@@ -1459,7 +1474,9 @@ function stealFood(){if(!playing)return;
  toast('🐟 Нашёл еду в холодильнике! +4 🐟');updateQuest();setProgress();
 }
 function goSleep(){if(!playing)return;
- if(cat.position.y<F-1||Math.hypot(cat.position.x+6.65,cat.position.z-5.55)>2.4){toast('💤 Найди кровать на втором этаже');return}
+ const beds=[...editablePieces.values()].filter(p=>!p.removed&&p.holder.visible&&/bed|кровать/i.test(p.model+' '+p.description));
+ const nearby=beds.some(p=>Math.abs(cat.position.y-p.holder.position.y)<1.4&&Math.hypot(cat.position.x-p.holder.position.x,cat.position.z-p.holder.position.z)<3.0);
+ if(!nearby){toast('💤 Подойди к одной из своих кроватей');return}
  sleeping=4;energy=100;mood=Math.min(100,mood+12);slept=true;sound('sleep');toast('💤 Мурр... котик отдыхает');updateQuest();
 }
 function questInteract(){if(!playing)return;
@@ -1487,11 +1504,14 @@ function groom(){if(!playing)return;mood=Math.min(100,mood+3);toast('🧼 Умы
 function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');if(questIndex===quests.length-1&&nearQuest(3,13,5)){storyFinished=true;updateQuest();}if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
 function jump(){if(!playing||!grounded||sleeping>0)return;velY=6.7;grounded=false;sound('jump')}
 function toggleView(){viewFirstPerson=!viewFirstPerson;document.getElementById('view').textContent=viewFirstPerson?'🐈 3D-КАМЕРА':'👁️ КАМЕРА';toast(viewFirstPerson?'👁️ Вид от первого лица':'🎥 Камера от третьего лица')}
-function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
+function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,storyVersion:2,gardenBench,gardenTrail,gardenClue,garageSearched,shedSearched,greenhouseSearched,saunaVisited,storyFinished,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
 function loadGame(){try{const current=localStorage.getItem('badcat3d-house-v21');const s=JSON.parse(current||localStorage.getItem('badcat3d-estate-v20')||localStorage.getItem('badcat3d-v16')||localStorage.getItem('badcat3d-v15')||localStorage.getItem('badcat3d-v04')||'null');if(!s)return;
- score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;questIndex=current?(s.questIndex||0):0;
+ score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;questIndex=s.storyVersion===2?(s.questIndex||0):0; // Old eight-step quest index belongs to a different storyline.
  ate=!!s.ate;scratched=!!s.scratched;slept=!!s.slept;escaped=!!s.escaped;
  streetKnocks=current?(s.streetKnocks||0):0;dugTreasure=!!current&&!!s.dugTreasure;buriedFish=!!current&&!!s.buriedFish;boughtMilk=false;bathed=!!current&&!!s.bathed;gnomeSaved=!!current&&!!s.gnomeSaved;dugBone=!!current&&!!s.dugBone;buriedBone=!!current&&!!s.buriedBone;neighborSlept=false;parkScratched=!!current&&!!s.parkScratched;marketFood=false;
+ gardenBench=!!s.gardenBench;gardenTrail=!!s.gardenTrail;gardenClue=!!s.gardenClue;
+ garageSearched=!!s.garageSearched;shedSearched=!!s.shedSearched;greenhouseSearched=!!s.greenhouseSearched;
+ saunaVisited=!!s.saunaVisited;storyFinished=!!s.storyFinished;
  // Avoid stale positions landing inside furniture; validate after load.
  if(current&&Array.isArray(s.cat)&&s.cat.length===3&&s.cat.every(Number.isFinite)&&Math.abs(s.cat[0])<67&&Math.abs(s.cat[2])<67)cat.position.set(...s.cat);
  updateQuest();setProgress();
@@ -1527,7 +1547,7 @@ addEventListener('keydown',e=>{
  if(!keys[key]){
   if(key===' ')jump();
   if(key==='e')chaosAction('knock');if(key==='f')chaosAction('scratch');if(key==='r')chaosAction('tear');
-  if(['g','c','o'].includes(key))stealFood();if(key==='x')questInteract();if(key==='h')goSleep();
+  if(['g','c'].includes(key))stealFood();if(key==='x')questInteract();if(key==='h')goSleep();
   if(key==='m')meow();if(key==='u')groom();if(key==='v')toggleView();
   if(key==='q'){camOrbit=0;camPitch=.15}
   if(key==='p')saveGame(true);
