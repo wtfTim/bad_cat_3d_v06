@@ -74,7 +74,7 @@ const F=3.55, CAT_RADIUS=.30, HUMAN_RADIUS=.35;
 function addBox(w,h,d,mat,x,y,z,{wall=false,top=false}={}){
  const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);house.add(mesh);
  if(wall){colliders.push({x1:x-w/2,x2:x+w/2,z1:z-d/2,z2:z+d/2,y1:y-h/2,y2:y+h/2,source:'wall'});wallMeshes.push(mesh)}
- if(top)walkableSurfaces.push({x1:x-w/2,x2:x+w/2,z1:z-d/2,z2:z+d/2,y:y+h/2});
+ if(top)walkableSurfaces.push({x1:x-w/2,x2:x+w/2,z1:z-d/2,z2:z+d/2,y:y+h/2,architecture:true});
  return mesh;
 }
 function ball(r,mat,x,y,z,parent,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m}
@@ -595,6 +595,16 @@ async function addCatalogItem(key,restore=null,id=null){
  const w=road?4:tree?3.7:small?.65:bed?2.7:seat?1.9:decor?1.2:/fridge|cabinet|bookcase|shelf|chest|dresser|rack/.test(match)?1.35:1.8,d=road?4:tree?3.6:small?.65:bed?2.65:seat?1.3:decor?.9:1.2,h=road?.38:tree?4.8:small?.8:bed?1.5:decor?.95:1.65;
  // New additions spawn ahead of the actual camera, not at the distant orbit target.
  // Restore and starter positions remain completely unchanged.
+ // Architectural floors only: avoid spawning on top of existing furniture.
+ function editorFloorAt(x,z,cameraHeight){
+  let floor=0;
+  for(const surface of walkableSurfaces){
+   if(!surface.architecture)continue;
+   if(x<surface.x1||x>surface.x2||z<surface.z1||z>surface.z2)continue;
+   if(surface.y<=cameraHeight+.15&&surface.y>floor)floor=surface.y;
+  }
+  return floor;
+ }
  const cameraSpawn=!restore&&editorOn;
  let spawnX=cat.position.x+2,spawnY=cat.position.y>F-1.1?F:0,spawnZ=cat.position.z+2;
  if(cameraSpawn){
@@ -608,7 +618,7 @@ async function addCatalogItem(key,restore=null,id=null){
   const distance=THREE.MathUtils.clamp(wall-.85,1.2,2.8);
   spawnX=camera.position.x+horizontal.x*distance;
   spawnZ=camera.position.z+horizontal.z*distance;
-  spawnY=Math.max(0,camera.position.y-.65);
+  spawnY=editorFloorAt(spawnX,spawnZ,camera.position.y);
  }
  const floor=restore?.pos?.[1]??spawnY,x=restore?.pos?.[0]??spawnX,z=restore?.pos?.[2]??spawnZ;
  const editId=id||'custom-'+(++customIndex);let piece;
