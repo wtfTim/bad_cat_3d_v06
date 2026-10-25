@@ -871,7 +871,7 @@ function wallRebuild(record){
  }
  const d=record.data;
  if(record.deleted)return;
- const length=Math.max(.4,Math.min(30,d.length)),height=Math.max(.4,Math.min(9,d.height)),thick=Math.max(.08,Math.min(1.2,d.thickness));
+ const length=Math.max(.4,Math.min(30,d.length)),height=Math.max(.4,Math.min(9,d.height)),thick=Math.max(.04,Math.min(1.2,d.thickness));
  // Build actual empty door/window openings from up to four solid wall segments.
  const segments=[],cutW=Math.min(length-.12,Math.max(.4,d.openingWidth||1.2));
  let low=0,high=0;
