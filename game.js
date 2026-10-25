@@ -448,7 +448,30 @@ function estateBuilding(b){
   addBox(3.4,.52,.22,m,x,H-.26,z+d/2,{wall:true});
   for(const side of [-1,1]){addBox(1.5,1.2,.05,windowMat,x+side*w*.33,1.8,z+d/2+.14);addBox(.13,2.6,.17,trimMat,x+side*1.75,1.3,z+d/2+.15)}
  }
- for(const side of [-1,1]){const slab=addBox(w+1,.18,d/2+.8,roof,x,H+.45,z+side*d/4);slab.rotation.x=side*.14;roofPieces.push({mesh:slab,x,z})}
+ // Proper gable roof: slopes run left/right across the facade (X), ridge runs in Z.
+ const overhang=.55,ridgeRise=Math.min(1.45,Math.max(.85,w*.075));
+ const angle=Math.atan2(ridgeRise,w/2);
+ const slopedWidth=(w/2+overhang)/Math.cos(angle);
+ for(const side of [-1,1]){
+  const slab=addBox(slopedWidth,.19,d+overhang*2,roof,x+side*w/4,H+.14+ridgeRise/2,z);
+  slab.rotation.z=-side*angle;
+  roofPieces.push({mesh:slab,x,z});
+ }
+ // Triangular front and rear gables close the holes between flat walls and the pitched roof.
+ for(const end of [-1,1]){
+  const vertices=new Float32Array([
+   x-w/2,H,z+end*d/2,
+   x+w/2,H,z+end*d/2,
+   x,H+ridgeRise,z+end*d/2
+  ]);
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(vertices,3));
+  geo.computeVertexNormals();
+  const gable=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:b.c,roughness:.85,side:THREE.DoubleSide}));
+  house.add(gable);
+ }
+ // Slim ridge cap seals the seam between the two overlapping roof slabs.
+ addBox(.24,.16,d+overhang*2,roof,x,H+.15+ridgeRise,z);
 
 }
 for(const b of estateBuildings)estateBuilding(b);
