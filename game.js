@@ -1449,9 +1449,59 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{keys[gameInputKey(e)]=false});addEventListener('blur',()=>{for(const key in keys)keys[key]=false;stick.x=stick.y=0});
 for(const event of ['contextmenu','selectstart','dragstart'])document.addEventListener(event,e=>e.preventDefault());
 document.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault()},{passive:false});
+// * ANDROID-BUILD TODO: review/remove these temporary mobile browser controls on native packaging.
+const mobileOrientationBtn=document.getElementById('mobileOrientation');
+const mobileFullscreenBtn=document.getElementById('mobileFullscreen');
+const mobileInstallBtn=document.getElementById('mobileInstall');
+const mobileInstallHint=document.getElementById('mobileInstallHint');
+let deferredInstallPrompt=null,orientationTarget='landscape';
+function mobileHint(message){
+ mobileInstallHint.textContent=message;mobileInstallHint.style.display='block';
+}
+function syncMobileButtons(){
+ const full=!!document.fullscreenElement;
+ mobileFullscreenBtn.textContent=full?'↙ Свернуть':'⛶ Экран';
+ mobileOrientationBtn.textContent=orientationTarget==='landscape'?'📱 Горизонт.':'📱 Вертикал.';
+ if(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)mobileInstallBtn.style.display='none';
+}
+async function requestGameFullscreen(){
+ if(document.fullscreenElement){await document.exitFullscreen();syncMobileButtons();return false}
+ if(!document.documentElement.requestFullscreen){mobileHint('Этот браузер не поддерживает полноэкранный режим. Добавь игру на главный экран.');return false}
+ try{await document.documentElement.requestFullscreen({navigationUI:'hide'});syncMobileButtons();return true}
+ catch(error){console.info('Fullscreen unavailable:',error);mobileHint('Браузер не разрешил полный экран. Добавь игру на главный экран.');return false}
+}
+mobileFullscreenBtn.addEventListener('click',()=>{requestGameFullscreen()});
+mobileOrientationBtn.addEventListener('click',async()=>{
+ orientationTarget=orientationTarget==='landscape'?'portrait':'landscape';
+ syncMobileButtons();
+ try{
+  if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();
+  if(!screen.orientation?.lock)throw Error('orientation lock unsupported');
+  await screen.orientation.lock(orientationTarget);
+  mobileInstallHint.style.display='none';
+ }catch(error){
+  console.info('Screen orientation lock unavailable:',error);
+  mobileHint('Поверни телефон '+(orientationTarget==='landscape'?'горизонтально':'вертикально')+'. На этом браузере поворот экрана вручную.');
+ }
+});
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event;mobileInstallBtn.style.display='';});
+mobileInstallBtn.addEventListener('click',async()=>{
+ if(deferredInstallPrompt){
+  const prompt=deferredInstallPrompt;deferredInstallPrompt=null;
+  try{await prompt.prompt();await prompt.userChoice;syncMobileButtons();}catch(e){console.info('Install prompt failed',e);}
+ }else if(/iPad|iPhone|iPod/.test(navigator.userAgent)){
+  mobileHint('iPhone: открой меню «Поделиться» → «На экран Домой».');
+ }else mobileHint('В Chrome открой меню ⋮ → «Добавить на главный экран» или «Установить приложение».');
+});
+document.addEventListener('fullscreenchange',syncMobileButtons);
+window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;mobileInstallBtn.style.display='none';mobileHint('Игра добавлена на главный экран!')});
+syncMobileButtons();
 const joy=document.getElementById('joy'),nub=document.getElementById('nub');let joyPointer=null;
-function setJoystick(e){const box=joy.getBoundingClientRect(),dx=e.clientX-(box.left+box.width/2),dy=e.clientY-(box.top+box.height/2),length=Math.hypot(dx,dy)||1,mag=Math.min(1,length/43);
- stick.x=dx/length*mag;stick.y=-dy/length*mag;nub.style.transform=`translate(${stick.x*43}px,${-stick.y*43}px)`}
+function setJoystick(e){const box=joy.getBoundingClientRect(),dx=e.clientX-(box.left+box.width/2),dy=e.clientY-(box.top+box.height/2),length=Math.hypot(dx,dy)||1;
+ const radius=(Math.min(box.width,box.height)-nub.getBoundingClientRect().width)/2-7;
+ const travel=Math.max(16,radius),mag=Math.min(1,length/travel);
+ stick.x=dx/length*mag;stick.y=-dy/length*mag;
+ nub.style.transform=`translate(${stick.x*travel}px,${-stick.y*travel}px)`}
 joy.addEventListener('pointerdown',e=>{e.preventDefault();joyPointer=e.pointerId;joy.setPointerCapture(joyPointer);setJoystick(e)});
 joy.addEventListener('pointermove',e=>{e.preventDefault();if(e.pointerId===joyPointer)setJoystick(e)});
 for(const name of ['pointerup','pointercancel'])joy.addEventListener(name,e=>{if(e.pointerId===joyPointer){joyPointer=null;stick.x=stick.y=0;nub.style.transform=''}});
