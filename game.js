@@ -739,6 +739,7 @@ editorPanel.innerHTML=`<header>🛠️ Редактор мира <button id="edT
  <div class="edLine"><button id="edWallApply">✅ Применить</button><button id="edWallRotate">↻ Повернуть 90°</button></div>
  <div class="edLine"><button id="edWallLeft">←</button><button id="edWallRight">→</button><button id="edWallForward">↑</button><button id="edWallBack">↓</button><button id="edWallUp">+5 см</button><button id="edWallDown">−5 см</button></div>
  <div class="edLine"><button id="edWallReset">↶ Вернуть / удалить стену</button><button id="edWallSave">💾 Сохранить стены</button><button id="edWallExport">⬇ Стены JSON</button></div>
+ <div class="edSmall">🧱 Стены хранятся в браузере. «Экспорт JSON» мебели включает стены; «Импорт JSON» принимает и файл только со стенами. Для другого устройства перенеси этот файл вручную.</div>
  </div>`;
 document.body.append(editorPanel);
 const editorButton=document.createElement('button');editorButton.id='editorButton';editorButton.textContent='🛠️ Мебель';document.body.append(editorButton);
@@ -1366,12 +1367,27 @@ async function loadExtras(){
   throw Error('Не загрузились '+missingFurnitureModels.length+' предметов: '+missingFurnitureModels.slice(0,3).join(', '));
  }
 }
-document.getElementById('edImportFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed.layout||typeof parsed.layout!=='object'||!Array.isArray(parsed.custom))throw Error('Invalid format');
- const previous=localStorage.getItem(WALL_SAVE_KEY);
- if(previous)localStorage.setItem(WALL_SAVE_KEY+'-backup-before-import',previous);
- localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));
- if(parsed.walls&&typeof parsed.walls==='object'&&!Array.isArray(parsed.walls))localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(parsed.walls));
- location.reload()}catch(err){toast('⚠️ Неверный файл JSON');console.error(err)}};
+document.getElementById('edImportFile').onchange=async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{
+  const parsed=JSON.parse(await file.text());
+  const wallsOnly=parsed.walls&&typeof parsed.walls==='object'&&!Array.isArray(parsed.walls);
+  const hasFurniture=parsed.layout&&typeof parsed.layout==='object'&&Array.isArray(parsed.custom);
+  if(!wallsOnly&&!hasFurniture)throw Error('Unsupported layout file');
+  if(wallsOnly){
+   const previous=localStorage.getItem(WALL_SAVE_KEY);
+   if(previous)localStorage.setItem(WALL_SAVE_KEY+'-backup-before-import',previous);
+   localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(parsed.walls));
+  }
+  if(hasFurniture){
+   const previous=localStorage.getItem(EDIT_SAVE_KEY);
+   if(previous)localStorage.setItem(EDIT_SAVE_KEY+'-backup-before-import',previous);
+   localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));
+   localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));
+  }
+  location.reload();
+ }catch(err){toast('⚠️ Неверный файл JSON мебели/стен');console.error(err)}
+};
 document.getElementById('edReset').onclick=()=>{
  if(!confirm('Восстановить твою сохранённую в проекте расстановку (416 объектов)? Текущие перемещения заменятся, прогресс квестов останется.'))return;
  const before=localStorage.getItem(EDIT_SAVE_KEY),extras=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
@@ -1635,7 +1651,12 @@ renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointer
   }}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
 for(const name of ['pointerup','pointercancel'])renderer.domElement.addEventListener(name,e=>{if(dragging===e.pointerId)dragging=null;if(editPointer===e.pointerId){editPointer=null;editDragMode=null;saveFurniture()}});
 document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.body.classList.add('game-started');document.getElementById('start').style.display='none';toast('🐾 Добро пожаловать! Следуй к метке на миникарте')};
-document.getElementById('reset').onclick=()=>{localStorage.removeItem('badcat3d-v16');localStorage.removeItem('badcat3d-v15');localStorage.removeItem('badcat3d-v13');localStorage.removeItem('badcat3d-v04');location.reload()};
+document.getElementById('reset').onclick=()=>{
+ if(!confirm('Начать приключение заново? Мебель и стены останутся как есть.'))return;
+ localStorage.removeItem('badcat3d-house-v21');
+ for(const key of ['badcat3d-v16','badcat3d-v15','badcat3d-v13','badcat3d-v04','badcat3d-estate-v20'])localStorage.removeItem(key);
+ location.reload();
+};
 const fps=document.createElement('div');fps.style.cssText='position:fixed;right:12px;bottom:8px;z-index:4;background:#263344c4;color:#fff;padding:5px 10px;border-radius:9px;font:700 12px system-ui;pointer-events:none';fps.textContent='⚡ FPS';document.body.append(fps);
 let fpsFrames=0,fpsSum=0;const clock=new THREE.Clock(),ray=new THREE.Raycaster();
 function updatePhysics(dt){
