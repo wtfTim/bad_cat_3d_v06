@@ -1376,14 +1376,14 @@ async function applyStarter({automatic=false}={}){
 document.getElementById('edStarter').onclick=()=>applyStarter();
 // This is the player's complete approved estate layout committed with the project.
 // Model files themselves remain in their respective asset packs.
-const BUILTIN_LAYOUT_KEY='badcat3d-builtin-layout-2026-10-25-v2';
+const BUILTIN_LAYOUT_KEY='badcat3d-builtin-layout-2026-10-25-v3';
 async function loadCommittedFurniture(){
- const paths=Array.from({length:6},(_,i)=>'./layouts/builtin_furniture_part_'+(i+1)+'.json');
+ const paths=Array.from({length:9},(_,i)=>'./layouts/estate_v3_part_'+(i+1)+'.json');
  const responses=await Promise.all(paths.map(path=>fetch(path,{cache:'no-store'})));
  for(let i=0;i<responses.length;i++)if(!responses[i].ok)throw Error('Missing bundled layout '+paths[i]+' ('+responses[i].status+')');
  const parts=await Promise.all(responses.map(response=>response.json()));
  const rows=parts.flat();
- if(rows.length!==416)throw Error('Incomplete bundled layout: '+rows.length+' instead of 416');
+ if(rows.length!==629)throw Error('Incomplete bundled layout: '+rows.length+' instead of 629');
  const layout={},custom=[];
  for(const row of rows){
   if(!Array.isArray(row)||row.length!==8||!Number.isInteger(row[0])||typeof row[1]!=='string'||row[1].indexOf(':')<1||
@@ -1397,38 +1397,32 @@ async function loadCommittedFurniture(){
 }
 async function initializeCommittedFurniture(){
  const builtin=await loadCommittedFurniture();
- const existingLayout=localStorage.getItem(EDIT_SAVE_KEY);
- const existingExtras=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
- if(localStorage.getItem(BUILTIN_LAYOUT_KEY)==='1'&&existingLayout&&existingExtras){
-  storedLayout=JSON.parse(existingLayout);return;
+ const layoutText=localStorage.getItem(EDIT_SAVE_KEY),customText=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
+ if(localStorage.getItem(BUILTIN_LAYOUT_KEY)==='1'&&layoutText&&customText){
+  storedLayout=JSON.parse(layoutText);return;
  }
- // Preserve previous browser layout and model list before the one-time v2 upgrade.
- if(existingLayout)localStorage.setItem(EDIT_SAVE_KEY+'-before-builtin-v2',existingLayout);
- if(existingExtras)localStorage.setItem(EDIT_SAVE_KEY+'-extras-before-builtin-v2',existingExtras);
- let nextLayout={...builtin.layout},nextCustom=builtin.custom.slice();
- if(existingLayout&&existingExtras){
-  const local=JSON.parse(existingLayout),extras=JSON.parse(existingExtras);
-  // Respect individually edited positions. Upgrade the unchanged old default
-  // electric stove to its corrected v2 position (the sole furniture difference).
-  const originalStove=local['custom-106'];
-  if(originalStove&&Array.isArray(originalStove.pos)){
-   const previous=[-9.850100822933001,0,-8.162290450140407];
-   const untouched=originalStove.pos.every((v,i)=>Math.abs(v-previous[i])<.00001)&&
-      Math.abs((originalStove.rot||0))<.00001&&originalStove.scale===1&&!originalStove.hidden;
-   if(untouched)local['custom-106']=builtin.layout['custom-106'];
-  }
-  nextLayout={...nextLayout,...local};
-  if(Array.isArray(extras)){
-   const byId=new Map(nextCustom.map(e=>[e.id,e]));
-   for(const item of extras)if(item&&typeof item.id==='string'&&typeof item.name==='string')byId.set(item.id,item);
-   nextCustom=[...byId.values()];
-  }
+ // v3 snapshot is authoritative: the newest user-provided arrangement replaces
+ // the older built-in furniture; extra items created beyond 629 are preserved.
+ if(layoutText)localStorage.setItem(EDIT_SAVE_KEY+'-before-builtin-v3',layoutText);
+ if(customText)localStorage.setItem(EDIT_SAVE_KEY+'-extras-before-builtin-v3',customText);
+ const mergedLayout={...builtin.layout},byId=new Map(builtin.custom.map(x=>[x.id,x]));
+ if(layoutText&&customText){
+  try{
+   const oldLayout=JSON.parse(layoutText),oldCustom=JSON.parse(customText);
+   if(Array.isArray(oldCustom))for(const item of oldCustom){
+    const n=Number(String(item?.id||'').slice(7));
+    if(Number.isInteger(n)&&n>629&&item?.name&&oldLayout[item.id]){
+     byId.set(item.id,item);mergedLayout[item.id]=oldLayout[item.id];
+    }
+   }
+  }catch(e){console.warn('Old layout could not be merged; backup is retained',e)}
  }
- localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(nextLayout));
- localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(nextCustom));
+ const mergedCustom=[...byId.values()];
+ localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(mergedLayout));
+ localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(mergedCustom));
  localStorage.setItem(BUILTIN_LAYOUT_KEY,'1');
- storedLayout=nextLayout;
- console.info('Bad Cat 3D: updated permanent estate v2 ('+builtin.custom.length+' objects; 16 walls)');
+ storedLayout=mergedLayout;
+ console.info('Bad Cat 3D: v3 estate ready ('+mergedCustom.length+' furniture models; 16 walls)');
 }
 const missingFurnitureModels=[];
 async function loadExtras(){
