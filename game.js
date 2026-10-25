@@ -563,8 +563,8 @@ document.getElementById('edRemove').onclick=()=>{if(!editSelected)return;editSel
 let customIndex=0;
 async function addCatalogItem(key,restore=null,id=null){
  if(!key.includes(':'))key='tiny:'+key;
- const [pack,name]=key.split(':');const match=name.toLowerCase(),decor=/art|mirror|carpet|rug|flower|grass/.test(match),small=/lamp|bookends|flower|grass|rock_small/.test(match),seat=/chair|pouffe|loveseat|sitting|sofa/.test(match),bed=/bed/.test(match),tree=/tree/.test(match);
- const w=tree?3.0:small?.55:bed?2.7:seat?1.5:decor?1.1:1.5,d=tree?3.0:small?.55:bed?2.6:seat?1.2:decor?.8:1.0,h=tree?4.2:small?.8:bed?1.6:decor?.9:1.5;
+ const [pack,name]=key.split(':');const match=name.toLowerCase(),decor=/art|mirror|carpet|rug|flower|grass|road|path|paving|tile/.test(match),small=/lamp|bookends|flower|grass|rock_small|wrench|shovel|hammer|toolbox/.test(match),seat=/chair|pouffe|loveseat|sitting|sofa/.test(match),bed=/bed/.test(match),tree=/tree|birch|pine|palm/.test(match),road=pack==='roads'||/path|road|paving/.test(match);
+ const w=road?4:tree?3.7:small?.65:bed?2.7:seat?1.9:decor?1.2:/fridge|cabinet|bookcase|shelf|chest|dresser|rack/.test(match)?1.35:1.8,d=road?4:tree?3.6:small?.65:bed?2.65:seat?1.3:decor?.9:1.2,h=road?.38:tree?4.8:small?.8:bed?1.5:decor?.95:1.65;
  const floor=restore?.pos?.[1]??(cat.position.y>F-1.1?F:0),x=restore?.pos?.[0]??(editorOn?editCamTarget.x:cat.position.x+2),z=restore?.pos?.[2]??(editorOn?editCamTarget.z:cat.position.z+2);
  const editId=id||'custom-'+(++customIndex);let piece;
  if(pack==='tiny')piece=await placeTiny([name,x,z,floor,w,d,h,restore?.rot||0,seat?'chair':bed?'bed':'solid','scratch',!decor],editId);
@@ -579,9 +579,133 @@ const originalAdd=addCatalogItem;
 // Track chosen models so custom furniture can be restored on reload and imported elsewhere.
 document.getElementById('edAdd').onclick=async()=>{try{const id='custom-'+(++customIndex),name=catalog.value;const piece=await addCatalogItem(name,null,id);customEntries.push({id,name});pickEdit(piece);saveFurniture();persistExtras();toast('🪑 Предмет добавлен — перетащи его')}catch(e){console.error(e);toast('Не удалось загрузить модель')}};
 function persistExtras(){localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(customEntries));}
-async function loadExtras(){try{customEntries=JSON.parse(localStorage.getItem(EDIT_SAVE_KEY+'-extras')||'[]');for(const c of customEntries){const number=Number(c.id.split('-')[1]);if(number>customIndex)customIndex=number;await addCatalogItem(c.name,storedLayout[c.id],c.id)}}catch(e){console.warn('Furniture extras load:',e)}}
+
+// Starter layout is stored as ordinary editable custom entries, not fixed 3D geometry.
+// All the objects can be moved, removed, exported and re-imported later.
+const starterLayout=[
+ // Living room
+ ['tiny:TinyLiving_LovelyLoveseat_12',-7.2,0,6.1,3.14],
+ ['tiny:TinyLiving_LovelyArmchair_33',-3.5,0,6.7,-.4],
+ ['kenney:tableCoffee',-6.4,0,3.8,0],
+ ['kenney:cabinetTelevision',-6.0,0,8.1,0],
+ ['kenney:bookcaseOpen',-9.6,0,3.1,1.57],
+ ['kenney:lampRoundFloor',-9.5,0,7.4,0],
+ ['kenney:rugRectangle',-6.4,0,5.15,0],
+ ['tiny:TinyLiving_ModernPouffe_36',-3.15,0,4.5,0],
+ // Kitchen
+ ['kenney:kitchenFridgeLarge',-9.45,0,-7.15,0],
+ ['kenney:kitchenSink',-9.45,0,-5.20,0],
+ ['kenney:kitchenStove',-9.45,0,-3.05,0],
+ ['kenney:kitchenCabinet',-7.5,0,-7.6,0],
+ ['kenney:kitchenCoffeeMachine',-6.3,0,-7.9,0],
+ ['kenney:table',-5.0,0,-5.25,0],
+ ['kenney:chairRounded',-5.0,0,-3.65,0],
+ ['kenney:chairRounded',-5.0,0,-6.7,3.14],
+ ['kenney:trashcan',-2.1,0,-7.7,0],
+ // Hall and dining
+ ['kenney:tableCloth',4.8,0,-5.6,0],
+ ['kenney:chairCushion',3.3,0,-5.6,1.57],
+ ['kenney:chairCushion',6.3,0,-5.6,-1.57],
+ ['kenney:chairCushion',4.8,0,-3.95,0],
+ ['kenney:bookcaseClosed',9.8,0,-7.2,1.57],
+ ['tiny:TinyLiving_ModernPouffe_36',4.1,0,7.4,0],
+ ['kenney:coatRackStanding',1.8,0,7.5,0],
+ // Upstairs
+ ['kenney:bedDouble',-6.4,3.55,5.6,0],
+ ['kenney:sideTableDrawers',-9.4,3.55,7.0,1.57],
+ ['tiny:TinyLiving_PowerTowerDresser_24',-9.3,3.55,2.9,1.57],
+ ['kenney:lampRoundTable',-9.4,3.55,6.1,0],
+ ['kenney:bathtub',-7.7,3.55,-7.5,0],
+ ['kenney:toilet',-3.1,3.55,-7.7,0],
+ ['kenney:bathroomSink',-9.5,3.55,-3.5,0],
+ ['kenney:desk',4.8,3.55,-7.15,0],
+ ['kenney:chairDesk',4.8,3.55,-5.1,3.14],
+ ['kenney:bookcaseOpen',9.7,3.55,-7.2,1.57],
+ ['kenney:loungeSofa',3.1,3.55,6.2,3.14],
+ ['kenney:tableCoffeeSquare',3.1,3.55,4.4,0],
+ // Garden near the house and patio
+ ['patio:garden_bench',-9.5,0,16,0],
+ ['patio:picnic_table',9.0,0,18,0],
+ ['patio:bbq_grill',11.5,0,14,0],
+ ['patio:planter_box',-7.0,0,15.7,0],
+ ['patio:mailbox_post',4.7,0,18.7,0],
+ ['nature:tree_default',-21,0,22,0],
+ ['nature:tree_oak',-25,0,-17,0],
+ ['nature:tree_default',23,0,24,0],
+ ['nature:tree_pineRoundA',-52,0,7,0],
+ ['nature:tree_simple',50,0,-50,0],
+ ['nature:plant_bushLarge',-16,0,15,0],
+ ['nature:plant_bush',15,0,17,0],
+ ['patio:gazebo',-20,0,27,0],
+ ['patio:hammock_stand',-29,0,23,0],
+ // Garage / shed, only existing models
+ ['kenney:desk',35.0,0,-37.0,0],
+ ['kenney:bookcaseOpen',31.5,0,-35.7,1.57],
+ ['market:18_Wood_Barrel',42.0,0,-36.0,0],
+ ['market:10_Empty_Crate',-43.2,0,-33.5,0],
+ ['market:15_Wheelbarrow',-38.5,0,-31.6,0],
+ ['market:13_Shovel',-45.0,0,-34.4,0],
+ ['market:14_Rake',-45.5,0,-33.0,0],
+ // Sauna / greenhouse
+ ['tiny:TinyLiving_LovelyLoveseat_12',38.1,0,32.0,0],
+ ['kenney:sideTable',43.0,0,31.8,0],
+ ['patio:raised_bed',-42.8,0,33.0,0],
+ ['patio:raised_bed',-38.0,0,33.0,0],
+ ['market:03_Plant_Shelf',-45.0,0,37.5,1.57],
+ ['nature:plant_bushDetailed',-32,0,39,0],
+ // Additional outdoor packs: included only after the ZIP is installed.
+ ['roads:straightRoad',2.7,0,24,0],
+ ['roads:straightRoad',2.7,0,28,0],
+ ['roads:straightRoad',2.7,0,32,0],
+ ['roads:curvedRoad',12,0,30,0],
+ ['garage:workbench',39.5,0,-36.1,0],
+ ['garage:tool_chest',43.2,0,-34.2,0],
+ ['garage:parts_shelf',31.8,0,-32.1,1.57],
+ ['garage:tire_stack',35.2,0,-30.9,0],
+ ['garden2:garden_path',-12,0,22,0],
+ ['garden2:garden_path',-15.5,0,22,0],
+ ['garden2:compost_bin',-51,0,29,0],
+ ['hydro:potting_bench',-42.3,0,35.3,0],
+ ['hydro:tomato_plant',-37.5,0,35.3,0],
+ ['hydro:seedling_tray',-36.8,0,38.0,0],
+ ['nature2:birch_tree',-48,0,50,0],
+ ['factory:box-large',-39.0,0,-33.2,0]
+];
+const STARTER_KEY='badcat3d-estate-v22-starter-installed';
+async function applyStarter({automatic=false}={}){
+ await extraCatalogReady;
+ if(!automatic && customEntries.length && !confirm('Добавить примерную расстановку к уже размещённым предметам? Существующая мебель останется.'))return;
+ let count=0;
+ for(const [name,x,y,z,rot] of starterLayout){
+  if(!ALL_CATALOG[name])continue;
+  const id='custom-'+(++customIndex);
+  const pose={pos:[x,y,z],rot,hidden:false};
+  storedLayout[id]=pose;
+  customEntries.push({id,name});
+  try{await addCatalogItem(name,pose,id);count++}catch(e){console.warn('Preset furniture failed:',name,e)}
+ }
+ localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(storedLayout));
+ persistExtras();localStorage.setItem(STARTER_KEY,'1');
+ toast('🏡 Расставлено '+count+' объектов. Можешь двигать и сохранять их!');
+}
+document.getElementById('edStarter').onclick=()=>applyStarter();
+async function loadExtras(){
+ try{
+  customEntries=JSON.parse(localStorage.getItem(EDIT_SAVE_KEY+'-extras')||'[]');
+  if(!Array.isArray(customEntries))customEntries=[];
+  if(!customEntries.length&&!localStorage.getItem(STARTER_KEY)){
+    await applyStarter({automatic:true});return;
+  }
+  await extraCatalogReady;
+  for(const c of customEntries){
+   const number=Number(c.id.split('-')[1]);if(number>customIndex)customIndex=number;
+   try{await addCatalogItem(c.name,storedLayout[c.id],c.id)}
+   catch(e){console.warn('Could not load custom item',c.name,e)}
+  }
+ }catch(e){console.warn('Furniture extras load:',e)}
+}
 document.getElementById('edImportFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed.layout||typeof parsed.layout!=='object'||!Array.isArray(parsed.custom))throw Error('Invalid format');localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));location.reload()}catch(err){toast('⚠️ Неверный файл JSON');console.error(err)}};
-document.getElementById('edReset').onclick=()=>{if(confirm('Сбросить только расстановку мебели? Прогресс квестов сохранится.')){localStorage.removeItem(EDIT_SAVE_KEY);localStorage.removeItem(EDIT_SAVE_KEY+'-extras');location.reload()}};
+document.getElementById('edReset').onclick=()=>{if(confirm('Сбросить только расстановку мебели? Прогресс квестов сохранится.')){localStorage.removeItem(EDIT_SAVE_KEY);localStorage.removeItem(EDIT_SAVE_KEY+'-extras');localStorage.setItem(STARTER_KEY,'1');location.reload()}};
 const rayPos=new THREE.Vector2();
 function editRay(event){const rect=renderer.domElement.getBoundingClientRect();rayPos.set(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);editHits.setFromCamera(rayPos,camera)}
 function selectFromPointer(event){editRay(event);const targets=[...editablePieces.values()].filter(p=>!p.removed).map(p=>p.holder);const hits=editHits.intersectObjects(targets,true);if(!hits.length){pickEdit(null);return;}let obj=hits[0].object;while(obj&&!targets.includes(obj))obj=obj.parent;const item=[...editablePieces.values()].find(p=>p.holder===obj);pickEdit(item||null)}
