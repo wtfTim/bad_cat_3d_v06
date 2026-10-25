@@ -3,6 +3,27 @@ import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/js
 
 // BAD CAT 3D v1.7: the only collision sources are architectural walls and the
 // furniture models actually loaded into the scene. Old invisible furniture is gone.
+// Real progress: all mandatory assets and every saved furniture instance must settle.
+const loadingUI={
+ status:document.getElementById('loadingStatus'),fill:document.getElementById('loadingFill'),
+ percent:document.getElementById('loadingPercent'),details:document.getElementById('loadingDetails'),
+ track:document.getElementById('loadingTrack'),play:document.getElementById('play'),
+ retry:document.getElementById('loadingRetry')
+};
+let loadingPhase=0,loadingCount=0,loadingTotal=1;
+function updateLoading(pct,status,detail){
+ const value=Math.max(loadingPhase,Math.min(100,Math.floor(pct)));
+ loadingPhase=value;
+ loadingUI.fill.style.width=value+'%';loadingUI.percent.textContent=value+'%';
+ loadingUI.track.setAttribute('aria-valuenow',String(value));
+ if(status)loadingUI.status.textContent=status;
+ if(detail!==undefined)loadingUI.details.textContent=detail;
+}
+function updateFurnitureLoading(){
+ const portion=loadingCount/Math.max(1,loadingTotal);
+ updateLoading(14+Math.floor(portion*80),'Расставляем мебель и предметы…',loadingCount+' из '+loadingTotal);
+}
+loadingUI.retry.addEventListener('click',()=>location.reload());
 const scene=new THREE.Scene();scene.background=new THREE.Color('#b4dbe9');scene.fog=new THREE.Fog('#b4dbe9',72,165);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.08,190);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -336,7 +357,7 @@ const catReady=new GLTFLoader().loadAsync('./assets/cat_character.glb').then(g=>
  }
  catCurrent=catActions.iddle||catActions.static||catActions.walk||null;
  if(catCurrent)catCurrent.reset().setEffectiveWeight(1).play();
-}).catch(e=>{console.error('Ошибка загрузки котика',e);toast('⚠️ Котик не загрузился — проверь папку assets')});
+}).catch(e=>{console.error('Ошибка загрузки котика',e);return false;});
 function animateCat(dt,moving,running){if(!catMixer)return;
  const want=moving?(running?'run':'walk'):'iddle',next=catActions[want]||catActions.iddle||catActions.walk;
  if(next&&next!==catCurrent){next.reset().setEffectiveWeight(1).play();if(catCurrent)next.crossFadeFrom(catCurrent,.18,false);catCurrent=next}
@@ -575,8 +596,6 @@ const estateInteriorLayout=[];
 // No procedural scenery, pool, planted beds, paths or trees.
 for(const c of colliders.slice(oldDistrictColliderCount))if(c.source==='wall')addDebugBox(c);
 
-const stage=document.createElement('div');stage.style.cssText='position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:10;background:#fff9eedd;color:#47374a;border-radius:12px;padding:7px 12px;font:700 12px system-ui;pointer-events:none';
-stage.textContent='🏠 Подготавливаем дом и твои сохранённые объекты...' ;document.body.append(stage);
 let loaded=0,failed=0;
 async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
  const result=await getModel(model);const obj=result.scene.clone(true);obj.updateMatrixWorld(true);
@@ -1273,15 +1292,16 @@ async function initializeCommittedFurniture(){
 }
 const missingFurnitureModels=[];
 async function loadExtras(){
- try{
-  try{await initializeCommittedFurniture();}
-  catch(error){console.error('Could not load committed furniture layout; retaining browser save',error)}
-  customEntries=JSON.parse(localStorage.getItem(EDIT_SAVE_KEY+'-extras')||'[]');
+ await initializeCommittedFurniture();
+ customEntries=JSON.parse(localStorage.getItem(EDIT_SAVE_KEY+'-extras')||'[]');
   if(!Array.isArray(customEntries))customEntries=[];
-  if(!customEntries.length){
-    console.warn('No project furniture layout available yet; keep current scene intact');return;
+  if(!Array.isArray(customEntries)||!customEntries.length)throw Error('Расстановка отсутствует');
+  loadingTotal=customEntries.length;
+  updateLoading(14,'Расставляем мебель и предметы…','0 из '+loadingTotal);
+  const extraReady=await extraCatalogReady;
+  if(!extraReady&&customEntries.some(c=>c.name&&!c.name.startsWith('tiny:')&&!c.name.startsWith('kenney:'))){
+   throw Error('Не загружен assets/extra_catalog.json: недоступны дополнительные модели');
   }
-  await extraCatalogReady;
   for(const c of customEntries){
    const number=Number(c.id.split('-')[1]);if(number>customIndex)customIndex=number;
    try{await addCatalogItem(c.name,storedLayout[c.id],c.id)}
@@ -1290,11 +1310,12 @@ async function loadExtras(){
     console.error('Model load failed:',c.name,'url:',ALL_CATALOG[c.name]||'(not in catalog)',e);
     missingFurnitureModels.push(c.name);
    }
+   loadingCount++;
+   updateFurnitureLoading();
   }
- }catch(e){console.warn('Furniture extras load:',e)}
  if(missingFurnitureModels.length){
   console.warn('Missing furniture models:',missingFurnitureModels);
-  toast('⚠️ Не загрузились '+missingFurnitureModels.length+' моделей. Расстановка сохранена; проверь assets/extra и F12');
+  throw Error('Не загрузились '+missingFurnitureModels.length+' предметов: '+missingFurnitureModels.slice(0,3).join(', '));
  }
 }
 document.getElementById('edImportFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed.layout||typeof parsed.layout!=='object'||!Array.isArray(parsed.custom))throw Error('Invalid format');localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));location.reload()}catch(err){toast('⚠️ Неверный файл JSON');console.error(err)}};
@@ -1329,18 +1350,32 @@ function selectFromPointer(event){
 }
 const furnitureExtrasReady=()=>loadExtras();
 
-const furnitureJob=Promise.allSettled([]).then(async results=>{
- await furnitureExtrasReady();
- failed=results.filter(r=>r.status==='rejected').length;
- if(failed)console.warn('Не удалось загрузить мебель:',results.filter(r=>r.status==='rejected'));
- furnitureReady=true;stage.textContent=`🏠 Дом готов · Твои объекты: ${customEntries.length}`+(failed?` · ${failed} ошибок`:' · всё на местах!');
- const button=document.getElementById('play');button.disabled=false;button.style.opacity='1';button.textContent='Играть! 🐾';
- // Old saves came from a different furniture layout. Use safe spawn positions on both floors.
- // A saved position near a bench is not grounds for moving the player home.
- // Manual recovery remains available from the button.
- if(isBlocked(owner.position.x,owner.position.z,0,HUMAN_RADIUS,1.8))owner.position.set(3.4,0,5.2);
- setTimeout(()=>stage.remove(),6000);
-});
+const furnitureJob=(async()=>{
+ try{
+  updateLoading(3,'Строим карту…','Готовим здания, дороги и двор');
+  const [catLoaded,tinyLookup]=await Promise.all([catReady,tinyLookupPromise]);
+  if(catLoaded===false||!catModel)throw Error('Не загрузилась 3D-модель котика');
+  if(!tinyLookup.size)throw Error('Пустой набор Tiny Living');
+  updateLoading(12,'Карта готова','Читаем сохранённую расстановку');
+  await furnitureExtrasReady();
+  if(loadingCount!==loadingTotal)throw Error('Не все предметы обработаны');
+  // Ensure all successfully placed instances actually exist in the scene.
+  const missing=customEntries.filter(c=>!editablePieces.has(c.id));
+  if(missing.length)throw Error('Не появились объекты: '+missing.slice(0,3).map(c=>c.name).join(', '));
+  updateLoading(100,'Всё готово! 🐾',customEntries.length+' предметов загружено. Приятной игры!');
+  furnitureReady=true;
+  loadingUI.play.disabled=false;
+  loadingUI.play.hidden=false;
+  if(isBlocked(owner.position.x,owner.position.z,0,HUMAN_RADIUS,1.8))owner.position.set(3.4,0,5.2);
+ }catch(error){
+  console.error('Game loading failed:',error);
+  furnitureReady=false;
+  loadingUI.play.hidden=true;loadingUI.play.disabled=true;
+  loadingUI.retry.hidden=false;
+  loadingUI.status.textContent='⚠️ Не удалось полностью загрузить игру';
+  loadingUI.details.textContent=(error?.message||String(error))+' · Проверь файлы и попробуй снова.';
+ }
+})();
 function nearest(kind,range=1.7){let result=null,dist=range;
  for(const it of interactables){if(it.used||it.removed||it.action!==kind)continue;
   const d=Math.hypot(cat.position.x-it.holder.position.x,cat.position.z-it.holder.position.z);
@@ -1514,7 +1549,7 @@ renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointer
    moveEditedSafely(editSelected,()=>{editSelected.holder.position.x=hit.x+editOffset.x;editSelected.holder.position.z=hit.z+editOffset.z;});
   }}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
 for(const name of ['pointerup','pointercancel'])renderer.domElement.addEventListener(name,e=>{if(dragging===e.pointerId)dragging=null;if(editPointer===e.pointerId){editPointer=null;editDragMode=null;saveFurniture()}});
-document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.getElementById('start').style.display='none';toast('🏘️ 16 соседских домов! Выход через ворота (+Z), X — задания')};
+document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.body.classList.add('game-started');document.getElementById('start').style.display='none';toast('🏘️ 16 соседских домов! Выход через ворота (+Z), X — задания')};
 document.getElementById('reset').onclick=()=>{localStorage.removeItem('badcat3d-v16');localStorage.removeItem('badcat3d-v15');localStorage.removeItem('badcat3d-v13');localStorage.removeItem('badcat3d-v04');location.reload()};
 const fps=document.createElement('div');fps.style.cssText='position:fixed;right:12px;bottom:8px;z-index:4;background:#263344c4;color:#fff;padding:5px 10px;border-radius:9px;font:700 12px system-ui;pointer-events:none';fps.textContent='⚡ FPS';document.body.append(fps);
 let fpsFrames=0,fpsSum=0;const clock=new THREE.Clock(),ray=new THREE.Raycaster();
