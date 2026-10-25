@@ -237,10 +237,21 @@ let score=0,chaos=0,hunger=85,energy=90,mood=85,alertness=0,questIndex=0;
 let ate=false,scratched=false,slept=false,escaped=false,playing=false,furnitureReady=false;
 let elapsed=0,saveTimer=0,messageUntil=0,camOrbit=0,camPitch=.15,viewFirstPerson=false;
 let audio=null;
+// Local per-device settings; independent of player progress and estate objects.
+const GAME_SETTINGS_KEY='badcat3d-user-settings-v1';
+let gamePrefs={volume:80,controls:{}};
+try{
+ const saved=JSON.parse(localStorage.getItem(GAME_SETTINGS_KEY)||'null');
+ if(saved&&typeof saved==='object'){
+  gamePrefs.volume=Number.isFinite(saved.volume)?Math.min(100,Math.max(0,saved.volume)):80;
+  gamePrefs.controls=saved.controls&&typeof saved.controls==='object'?saved.controls:{};
+ }
+}catch(e){console.warn('Invalid user settings, using defaults',e)}
+function persistGamePrefs(){try{localStorage.setItem(GAME_SETTINGS_KEY,JSON.stringify(gamePrefs))}catch(e){console.warn('Cannot save settings',e)}}
 function sound(type){if(!audio)return;const now=audio.currentTime,osc=audio.createOscillator(),gain=audio.createGain();
  const s={meow:[490,270,.27,'sawtooth'],jump:[300,540,.13,'sine'],hit:[205,70,.2,'triangle'],scratch:[430,125,.25,'sawtooth'],tear:[620,170,.19,'triangle'],eat:[390,230,.2,'sine'],sleep:[120,85,.35,'sine'],alert:[630,860,.24,'square']}[type]||[220,90,.18,'triangle'];
  osc.type=s[3];osc.frequency.setValueAtTime(s[0],now);osc.frequency.exponentialRampToValueAtTime(s[1],now+s[2]);
- gain.gain.setValueAtTime(.07,now);gain.gain.exponentialRampToValueAtTime(.001,now+s[2]);osc.connect(gain);gain.connect(audio.destination);osc.start(now);osc.stop(now+s[2]+.02);
+ gain.gain.setValueAtTime(.07*gamePrefs.volume/100,now);gain.gain.exponentialRampToValueAtTime(.001,now+s[2]);osc.connect(gain);gain.connect(audio.destination);osc.start(now);osc.stop(now+s[2]+.02);
 }
 function toast(text){HUD.message.textContent=text;HUD.message.style.opacity='1';messageUntil=elapsed+2.1}
 function setProgress(){HUD.score.textContent=score;HUD.count.textContent=chaos;HUD.hunger.textContent=Math.round(hunger);HUD.energy.textContent=Math.round(energy);HUD.alert.textContent=alertness>55?'ПОГОНЯ!':alertness>20?'Ищет котика':'Спокойно';HUD.mood.textContent=mood>60?'Довольный 😺':mood>25?'Скучает 😿':'Грустный 🙀'}
@@ -1701,6 +1712,134 @@ mobileInstallBtn.addEventListener('click',async()=>{
 document.addEventListener('fullscreenchange',syncMobileButtons);
 window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;mobileInstallBtn.style.display='none';mobileHint('Игра добавлена на главный экран!')});
 syncMobileButtons();
+// Accessible mobile/gamepad layout settings. Drag individual actions and joystick only
+// in the explicit arrangement mode; regular playing never triggers layout changes.
+const controlIds=['jump','swat','scratch','tear','eat','sleep','meow','groom','view','use','unstuck','joy'];
+let settingsOpen=false,controlsEditing=false,layoutBeforeEdit=null;
+const settingsStyles=document.createElement('style');
+settingsStyles.textContent=`
+#gameSettingsButton{background:#59647c!important;color:#fff!important;min-width:40px}
+#gameSettingsShade{position:fixed;inset:0;z-index:8000;background:#171521c9;display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+#gameSettingsPanel{background:#fff9ec;color:#3d3146;border-radius:20px;padding:20px;width:min(440px,100%);max-height:88dvh;overflow:auto;box-shadow:0 18px 55px #0008;font:15px/1.5 system-ui}
+#gameSettingsPanel h2{font-size:24px;margin:0 0 14px}
+#gameSettingsPanel label{display:block;font-weight:750;margin-bottom:10px}
+#gameSettingsPanel input[type=range]{display:block;width:100%;accent-color:#9765a4;margin:12px 0}
+#gameSettingsPanel button,#controlEditToolbar button{background:#5a597f;color:#fff;border:0;padding:11px 14px;min-height:45px;border-radius:11px;font:800 14px system-ui;cursor:pointer}
+#gameSettingsPanel .settingsLine{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+#gameSettingsPanel small{display:block;color:#63566a;margin-top:8px}
+body.controls-custom #actions{display:contents!important}
+body.controls-custom #actions>button{position:fixed!important;right:auto!important;bottom:auto!important;transform:none!important;z-index:25!important;touch-action:none}
+body.controls-custom #joy{position:fixed!important;right:auto!important;bottom:auto!important;transform:none!important;touch-action:none}
+body.controls-editing #actions>button,body.controls-editing #joy{z-index:8100!important;outline:3px dashed #ffc46b!important;cursor:grab!important;user-select:none!important}
+#controlEditToolbar{position:fixed;z-index:8200;top:calc(48px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:none;gap:8px;align-items:center;padding:8px 10px;background:#fffaf1;border-radius:14px;box-shadow:0 4px 16px #0005;max-width:96vw}
+#controlEditToolbar span{color:#41334b;font:800 12px system-ui}
+@media(pointer:coarse){body.controls-editing #hud,body.controls-editing #mobileGameBar,body.controls-editing #editorButton,body.controls-editing #storyJournalBtn{pointer-events:none}}
+`;
+document.head.append(settingsStyles);
+const settingsBtn=document.createElement('button');
+settingsBtn.id='gameSettingsButton';settingsBtn.textContent='⚙️';settingsBtn.title='Настройки игры';
+document.getElementById('mobileGameBar').append(settingsBtn);
+const shade=document.createElement('div');shade.id='gameSettingsShade';
+shade.innerHTML=`<div id="gameSettingsPanel" role="dialog" aria-modal="true" aria-label="Настройки игры">
+<h2>⚙️ Настройки</h2>
+<label for="gameVolume">🔊 Звук: <output id="gameVolumeValue">80%</output></label>
+<input type="range" id="gameVolume" min="0" max="100" step="5" value="80" aria-label="Громкость звуков">
+<div class="settingsLine"><button id="arrangeControls">🎮 Переставить кнопки</button><button id="resetControls">↺ Сброс кнопок</button></div>
+<small>В режиме перестановки перетащи пальцем каждую кнопку и джойстик туда, где удобно. Нажми «Сохранить» после изменения.</small>
+<div class="settingsLine"><button id="settingsClose">✓ Закрыть</button></div>
+</div>`;
+document.body.append(shade);
+const controlsBar=document.createElement('div');controlsBar.id='controlEditToolbar';
+controlsBar.innerHTML='<span>🎮 Перетаскивай кнопки</span><button id="controlsSave">✓ Сохранить</button><button id="controlsCancel">✕ Отмена</button>';
+document.body.append(controlsBar);
+const volumeSlider=document.getElementById('gameVolume'),volumeText=document.getElementById('gameVolumeValue');
+volumeSlider.value=String(gamePrefs.volume);volumeText.textContent=gamePrefs.volume+'%';
+volumeSlider.addEventListener('input',()=>{gamePrefs.volume=Number(volumeSlider.value);volumeText.textContent=gamePrefs.volume+'%';persistGamePrefs()});
+function showSettings(){
+ if(!playing||controlsEditing)return;
+ settingsOpen=true;shade.style.display='flex';
+ for(const key in keys)keys[key]=false;stick.x=stick.y=0;
+}
+function hideSettings(){settingsOpen=false;shade.style.display='none'}
+settingsBtn.addEventListener('click',showSettings);
+document.getElementById('settingsClose').addEventListener('click',hideSettings);
+shade.addEventListener('pointerdown',e=>{if(e.target===shade)hideSettings()});
+function controlEl(id){return document.getElementById(id)}
+function clampControls(){
+ for(const id of controlIds){
+  const p=gamePrefs.controls[id],el=controlEl(id);if(!p||!el)continue;
+  const width=el.getBoundingClientRect().width,height=el.getBoundingClientRect().height;
+  const x=Math.max(3,Math.min(innerWidth-width-3,innerWidth*(p.x/100)));
+  const y=Math.max(3,Math.min(innerHeight-height-3,innerHeight*(p.y/100)));
+  el.style.setProperty('left',x+'px','important');el.style.setProperty('top',y+'px','important');
+ }
+}
+function useSavedControlLayout(){
+ const hasLayout=Object.keys(gamePrefs.controls).length>0;
+ document.body.classList.toggle('controls-custom',hasLayout||controlsEditing);
+ if(hasLayout)clampControls();
+}
+function captureControlPositions(){
+ for(const id of controlIds){
+  const el=controlEl(id),r=el.getBoundingClientRect();
+  gamePrefs.controls[id]={x:100*r.left/innerWidth,y:100*r.top/innerHeight};
+ }
+}
+document.getElementById('arrangeControls').addEventListener('click',()=>{
+ // Capture actual current visual locations before dissolving the button grid.
+ layoutBeforeEdit=JSON.parse(JSON.stringify(gamePrefs.controls));
+ if(!Object.keys(gamePrefs.controls).length)captureControlPositions();
+ hideSettings();controlsEditing=true;
+ document.body.classList.add('controls-editing');controlsBar.style.display='flex';
+ useSavedControlLayout();
+});
+function finishControlEditing(save){
+ if(!save)gamePrefs.controls=layoutBeforeEdit||{};
+ controlsEditing=false;controlsBar.style.display='none';document.body.classList.remove('controls-editing');
+ if(save)persistGamePrefs();
+ if(!Object.keys(gamePrefs.controls).length){
+  document.body.classList.remove('controls-custom');
+  for(const id of controlIds){const el=controlEl(id);el.style.removeProperty('left');el.style.removeProperty('top')}
+ }else useSavedControlLayout();
+ layoutBeforeEdit=null;
+ showSettings();
+}
+document.getElementById('controlsSave').addEventListener('click',()=>finishControlEditing(true));
+document.getElementById('controlsCancel').addEventListener('click',()=>finishControlEditing(false));
+document.getElementById('resetControls').addEventListener('click',()=>{
+ gamePrefs.controls={};persistGamePrefs();
+ document.body.classList.remove('controls-custom');
+ for(const id of controlIds){const el=controlEl(id);el.style.removeProperty('left');el.style.removeProperty('top')}
+ toast('🎮 Расположение кнопок сброшено');
+});
+let controlDragging=null;
+for(const id of controlIds){
+ const el=controlEl(id);
+ el.addEventListener('pointerdown',e=>{
+  if(!controlsEditing)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const rect=el.getBoundingClientRect();
+  controlDragging={id,pointer:e.pointerId,dx:e.clientX-rect.left,dy:e.clientY-rect.top};
+  el.setPointerCapture(e.pointerId);
+ },true);
+ el.addEventListener('pointermove',e=>{
+  if(!controlDragging||controlDragging.id!==id||controlDragging.pointer!==e.pointerId)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const width=el.getBoundingClientRect().width,height=el.getBoundingClientRect().height;
+  const x=Math.min(Math.max(3,e.clientX-controlDragging.dx),innerWidth-width-3);
+  const y=Math.min(Math.max(3,e.clientY-controlDragging.dy),innerHeight-height-3);
+  el.style.setProperty('left',x+'px','important');el.style.setProperty('top',y+'px','important');
+  gamePrefs.controls[id]={x:x/innerWidth*100,y:y/innerHeight*100};
+ },true);
+ for(const evt of ['pointerup','pointercancel']){
+  el.addEventListener(evt,e=>{
+   if(!controlDragging||controlDragging.id!==id||e.pointerId!==controlDragging.pointer)return;
+   e.preventDefault();e.stopImmediatePropagation();controlDragging=null;
+  },true);
+ }
+}
+window.addEventListener('resize',()=>{if(!controlsEditing)useSavedControlLayout()});
+useSavedControlLayout();
 const joy=document.getElementById('joy'),nub=document.getElementById('nub');let joyPointer=null;
 function setJoystick(e){const box=joy.getBoundingClientRect(),dx=e.clientX-(box.left+box.width/2),dy=e.clientY-(box.top+box.height/2),length=Math.hypot(dx,dy)||1;
  const radius=(Math.min(box.width,box.height)-nub.getBoundingClientRect().width)/2-7;
@@ -1811,7 +1950,7 @@ function drawMap(){
 }
 mapCanvas.parentElement.addEventListener('pointerdown',e=>{e.stopPropagation();mapBig=!mapBig;mapCanvas.parentElement.classList.toggle('large',mapBig)});
 function render(){requestAnimationFrame(render);const dt=Math.min(clock.getDelta(),.038);elapsed+=dt;
- if(playing&&furnitureReady&&!editorOn&&!storyDialogOpen){
+ if(playing&&furnitureReady&&!editorOn&&!storyDialogOpen&&!settingsOpen&&!controlsEditing){
   // Искра walks alongside the cat after the last garage conversation.
   if(questIndex>=108){
    const tx=cat.position.x+1.15,tz=cat.position.z-.85;
