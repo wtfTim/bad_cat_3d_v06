@@ -556,7 +556,19 @@ document.getElementById('edTop').onclick=()=>{editCamPitch=1.43;editCamDistance=
 renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
 renderer.domElement.addEventListener('wheel',e=>{if(editorOn){e.preventDefault();editCamDistance=THREE.MathUtils.clamp(editCamDistance*Math.exp(e.deltaY*.001),1.8,90)}},{passive:false});
 editorButton.onclick=()=>toggleEditor();document.getElementById('edToggle').onclick=()=>toggleEditor(false);
-function moveEdit(dx,dz,dy=0,rot=0){if(!editSelected)return;moveEditedSafely(editSelected,()=>{const p=editSelected.holder.position;p.x+=dx;p.z+=dz;p.y=Math.max(0,p.y+dy);editSelected.holder.rotation.y+=rot;});}
+function moveEdit(dx,dz,dy=0,rot=0){
+ if(!editSelected)return;
+ // Buttons use camera-relative directions: left always looks left on screen.
+ const rightX=Math.cos(editCamYaw),rightZ=-Math.sin(editCamYaw);
+ const forwardX=Math.sin(editCamYaw),forwardZ=Math.cos(editCamYaw);
+ moveEditedSafely(editSelected,()=>{
+  const p=editSelected.holder.position;
+  p.x+=dx*rightX+dz*forwardX;
+  p.z+=dx*rightZ+dz*forwardZ;
+  p.y=Math.max(0,p.y+dy);
+  editSelected.holder.rotation.y+=rot;
+ });
+}
 for(const [id,dx,dz,dy,rot] of [['edLeft',-.25,0,0,0],['edRight',.25,0,0,0],['edForward',0,-.25,0,0],['edBack',0,.25,0,0],['edUp',0,0,F,0],['edDown',0,0,-F,0],['edRotL',0,0,0,-Math.PI/12],['edRotR',0,0,0,Math.PI/12]])document.getElementById(id).onclick=()=>moveEdit(dx,dz,dy,rot);
 document.getElementById('edSave').onclick=()=>{saveFurniture();toast('💾 Расстановка сохранена в браузере!')};
 document.getElementById('edRemove').onclick=()=>{if(!editSelected)return;editSelected.removed=true;editSelected.holder.visible=false;refreshEditBounds(editSelected);pickEdit(null);saveFurniture()};
