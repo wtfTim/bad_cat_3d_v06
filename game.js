@@ -344,8 +344,8 @@ async function placeTiny(entry,id){
  const lookup=await tinyLookupPromise; const source=lookup.get(name); if(!source) throw Error('Tiny model missing: '+name);
  const obj=source.clone(true); obj.updateMatrixWorld(true);
  const raw=new THREE.Box3().setFromObject(obj),size=raw.getSize(new THREE.Vector3()),center=raw.getCenter(new THREE.Vector3());
- if(Math.min(size.x,size.y,size.z)<1e-6) throw Error('Tiny zero size: '+name);
- const scale=Math.min(w/size.x,dpt/size.z,h/size.y);
+ if([size.x,size.y,size.z].filter(v=>Number.isFinite(v)&&v>1e-6).length<2)throw Error('Tiny zero size: '+name);
+ const scale=Math.min(size.x>1e-6?w/size.x:Infinity,size.y>1e-6?h/size.y:Infinity,size.z>1e-6?dpt/size.z:Infinity);
  obj.position.set(-center.x,-raw.min.y,-center.z);
  const align=new THREE.Group(); align.add(obj); align.scale.setScalar(scale);
  const holder=new THREE.Group(); holder.position.set(x,floor,z); holder.rotation.y=yaw; holder.add(align); house.add(holder); holder.updateMatrixWorld(true);
@@ -466,8 +466,8 @@ let loaded=0,failed=0;
 async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
  const result=await getModel(model);const obj=result.scene.clone(true);obj.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(obj),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
- if(size.x<.00001||size.y<.00001||size.z<.00001)throw Error('Bad dimensions '+model);
- const scale=Math.min(w/size.x,dpt/size.z,h/size.y);
+ if([size.x,size.y,size.z].filter(v=>Number.isFinite(v)&&v>.00001).length<2)throw Error('Bad dimensions '+model);
+ const scale=Math.min(size.x>.00001?w/size.x:Infinity,size.y>.00001?h/size.y:Infinity,size.z>.00001?dpt/size.z:Infinity);
  const align=new THREE.Group();obj.position.set(-center.x,-bounds.min.y,-center.z);align.add(obj);align.scale.setScalar(scale);
  const holder=new THREE.Group();holder.position.set(x,floor,z);holder.rotation.y=yaw;holder.add(align);
  holder.traverse(n=>{if(n.isMesh){n.castShadow=false;n.receiveShadow=false}});house.add(holder);holder.updateMatrixWorld(true);
@@ -496,8 +496,11 @@ function getGardenModel(pack,name){const key=pack+'_'+name;if(!gardenCache.has(k
 async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action,solid]=entry;
  const result=await getGardenModel(pack,name),obj=result.scene.clone(true);
  obj.updateMatrixWorld(true);const raw=new THREE.Box3().setFromObject(obj),size=raw.getSize(new THREE.Vector3()),center=raw.getCenter(new THREE.Vector3());
- if(Math.min(size.x,size.y,size.z)<.000001)throw Error('Нулевая модель: '+pack+' '+name);
- const scale=Math.min(w/size.x,d/size.z,h/size.y);obj.position.set(-center.x,-raw.min.y,-center.z);
+ // Doors, signs and panels may be flat on one axis; this is valid 2D geometry.
+ const activeAxes=[size.x,size.y,size.z].filter(v=>Number.isFinite(v)&&v>.000001);
+ if(activeAxes.length<2)throw Error('Модель не содержит пригодной геометрии: '+pack+' '+name);
+ const ratios=[size.x>.000001?w/size.x:Infinity,size.y>.000001?h/size.y:Infinity,size.z>.000001?d/size.z:Infinity];
+ const scale=Math.min(...ratios);obj.position.set(-center.x,-raw.min.y,-center.z);
  const aligned=new THREE.Group();aligned.add(obj);aligned.scale.setScalar(scale);
  const holder=new THREE.Group();holder.position.set(x,0,z);holder.rotation.y=yaw;holder.add(aligned);house.add(holder);holder.updateMatrixWorld(true);
  const bb=new THREE.Box3().setFromObject(holder);
@@ -612,6 +615,10 @@ function refreshCatalog(){
  previewCatalog();
 }
 packSelect.onchange=refreshCatalog;categorySelect.onchange=refreshCatalog;document.getElementById('edSearch').oninput=refreshCatalog;catalog.onchange=previewCatalog;
+// Diagnose a common missing external colormap without producing extra repeated HTTP requests.
+fetch('./assets/extra/Textures/colormap.png',{method:'HEAD',cache:'no-store'})
+ .then(response=>{if(!response.ok)console.warn('Bad Cat 3D: missing original model texture assets/extra/Textures/colormap.png (HTTP '+response.status+'). Restore it from your installed model pack to keep the intended colors.');})
+ .catch(()=>console.warn('Bad Cat 3D: cannot check assets/extra/Textures/colormap.png'));
 const extraCatalogReady=fetch('./assets/extra_catalog.json',{cache:'no-store'}).then(async res=>{
  if(!res.ok)throw Error('Additional packs not installed');
  const manifest=await res.json();
