@@ -24,6 +24,8 @@ function registerEditable(id,piece,description){
  piece.editId=id;piece.description=description;editablePieces.set(id,piece);
  const saved=storedLayout[id];if(saved&&Array.isArray(saved.pos)&&saved.pos.length===3){
   piece.holder.position.set(...saved.pos);piece.holder.rotation.y=saved.rot||0;
+  // Old layouts without scale remain at their original size.
+  if(Number.isFinite(saved.scale)&&saved.scale>=.2&&saved.scale<=4)piece.holder.scale.setScalar(saved.scale);
   if(saved.hidden){piece.holder.visible=false;piece.removed=true;}
   refreshEditBounds(piece);
  }
@@ -55,10 +57,10 @@ function canPlaceEdited(piece){
 }
 function moveEditedSafely(piece,changePose){
  if(!piece)return false;
- const prev=piece.holder.position.clone(),rot=piece.holder.rotation.y;
+ const prev=piece.holder.position.clone(),rot=piece.holder.rotation.y,oldScale=piece.holder.scale.clone();
  changePose();
  if(!canPlaceEdited(piece)){
-  piece.holder.position.copy(prev);piece.holder.rotation.y=rot;
+  piece.holder.position.copy(prev);piece.holder.rotation.y=rot;piece.holder.scale.copy(oldScale);
   toast('🚧 Здесь стена или граница участка');
   return false;
  }
@@ -66,7 +68,7 @@ function moveEditedSafely(piece,changePose){
  refreshEditBounds(piece);if(editHelper)editHelper.update();syncEditorLabel();
  return true;
 }
-function saveFurniture(){const all={};for(const [id,p] of editablePieces){all[id]={pos:[p.holder.position.x,p.holder.position.y,p.holder.position.z],rot:p.holder.rotation.y,hidden:!!p.removed};}localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(all));}
+function saveFurniture(){const all={};for(const [id,p] of editablePieces){all[id]={pos:[p.holder.position.x,p.holder.position.y,p.holder.position.z],rot:p.holder.rotation.y,scale:p.holder.scale.x,hidden:!!p.removed};}localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(all));}
 
 const F=3.55, CAT_RADIUS=.30, HUMAN_RADIUS=.35;
 function addBox(w,h,d,mat,x,y,z,{wall=false,top=false}={}){
@@ -453,7 +455,8 @@ editorPanel.innerHTML=`<header>🛠️ Редактор мира <button id="edT
  <div class="edLine"><button id="edCameraMode">📷 Камера</button><button id="edFocus">🎯 К предмету</button><button id="edTop">⬇ Вид сверху</button></div>
  <div id="edSelected">Предмет не выбран</div>
  <div class="edLine"><button id="edLeft">←</button><button id="edForward">↑</button><button id="edBack">↓</button><button id="edRight">→</button><button id="edRotL">↶</button><button id="edRotR">↷</button></div>
- <div class="edLine"><button id="edFineUp">⬆ Выше +10 см</button><button id="edFineDown">⬇ Ниже −10 см</button></div>
+ <div class="edLine"><button id="edFineUp">⬆ Выше +5 см</button><button id="edFineDown">⬇ Ниже −5 см</button></div>
+ <div class="edLine"><button id="edScaleUp">🔎 Размер +5%</button><button id="edScaleDown">Размер −5%</button><button id="edScaleReset">100%</button></div>
  <div class="edLine"><button id="edUp">Этаж ↑</button><button id="edDown">Этаж ↓</button><button id="edRemove">Убрать</button></div>
  <label for="edCategory">Категория:</label><select id="edCategory"></select><label for="edPack">Набор:</label><select id="edPack"></select>
  <label for="edCatalog">Модель:</label><input id="edSearch" placeholder="🔎 Найти модель" style="width:100%;padding:9px;margin-top:5px;border-radius:8px"><select id="edCatalog" size="6" style="height:155px"></select>
@@ -547,7 +550,7 @@ async function previewCatalog(){const key=catalog.value,token=++previewToken;if(
 refreshCatalog();
 let editCamTarget=new THREE.Vector3(0,1.4,0),editCamYaw=.6,editCamPitch=.55,editCamDistance=14,editCameraMode=false,editDragMode=null,editLastX=0,editLastY=0;
 let editorOn=false,editSelected=null,editHelper=null,editPointer=null,editPlane=new THREE.Plane(),editOffset=new THREE.Vector3(),editHits=new THREE.Raycaster();
-function syncEditorLabel(){document.getElementById('edSelected').textContent=editSelected?`${editSelected.description} · X ${editSelected.holder.position.x.toFixed(1)} · Z ${editSelected.holder.position.z.toFixed(1)} · Y ${editSelected.holder.position.y.toFixed(1)}`:'Нажми на любую мебель в сцене';}
+function syncEditorLabel(){document.getElementById('edSelected').textContent=editSelected?`${editSelected.description} · X ${editSelected.holder.position.x.toFixed(1)} · Z ${editSelected.holder.position.z.toFixed(1)} · Y ${editSelected.holder.position.y.toFixed(2)} · Размер ${Math.round(editSelected.holder.scale.x*100)}%`:'Нажми на любую мебель в сцене';}
 function pickEdit(item){editSelected=item;if(editHelper){scene.remove(editHelper);editHelper.geometry.dispose();editHelper.material.dispose();editHelper=null;}if(item){editHelper=new THREE.BoxHelper(item.holder,0xffd543);scene.add(editHelper)}syncEditorLabel();}
 function toggleEditor(force){editorOn=typeof force==='boolean'?force:!editorOn;editorPanel.style.display=editorOn?'block':'none';editorButton.textContent=editorOn?'✅ Закончить':'🛠️ Мебель';if(!editorOn){pickEdit(null);editPointer=null;saveFurniture();}else{// Free camera starts at its current independent world pose, never attached to the cat.
 editCamTarget.copy(camera.position).add(new THREE.Vector3(Math.sin(editCamYaw)*8,0,Math.cos(editCamYaw)*8));editCamDistance=8;for(const k in keys)keys[k]=false;stick.x=stick.y=0;toast('🛠️ Выбери предмет мышью / пальцем');}}
@@ -570,7 +573,19 @@ function moveEdit(dx,dz,dy=0,rot=0){
   editSelected.holder.rotation.y+=rot;
  });
 }
-for(const [id,dx,dz,dy,rot] of [['edLeft',-.25,0,0,0],['edRight',.25,0,0,0],['edForward',0,-.25,0,0],['edBack',0,.25,0,0],['edFineUp',0,0,.10,0],['edFineDown',0,0,-.10,0],['edUp',0,0,F,0],['edDown',0,0,-F,0],['edRotL',0,0,0,-Math.PI/12],['edRotR',0,0,0,Math.PI/12]])document.getElementById(id).onclick=()=>moveEdit(dx,dz,dy,rot);
+for(const [id,dx,dz,dy,rot] of [['edLeft',-.25,0,0,0],['edRight',.25,0,0,0],['edForward',0,-.25,0,0],['edBack',0,.25,0,0],['edFineUp',0,0,.05,0],['edFineDown',0,0,-.05,0],['edUp',0,0,F,0],['edDown',0,0,-F,0],['edRotL',0,0,0,-Math.PI/12],['edRotR',0,0,0,Math.PI/12]])document.getElementById(id).onclick=()=>moveEdit(dx,dz,dy,rot);
+// Uniform sizing keeps original proportions and uses the same architectural collision guard.
+function resizeEdited(factor,reset=false){
+ if(!editSelected)return;
+ const piece=editSelected;
+ moveEditedSafely(piece,()=>{
+  const next=reset?1:THREE.MathUtils.clamp(piece.holder.scale.x*factor,.2,4);
+  piece.holder.scale.setScalar(next);
+ });
+}
+document.getElementById('edScaleUp').onclick=()=>resizeEdited(1.05);
+document.getElementById('edScaleDown').onclick=()=>resizeEdited(.95);
+document.getElementById('edScaleReset').onclick=()=>resizeEdited(1,true);
 document.getElementById('edSave').onclick=()=>{saveFurniture();toast('💾 Расстановка сохранена в браузере!')};
 document.getElementById('edRemove').onclick=()=>{if(!editSelected)return;editSelected.removed=true;editSelected.holder.visible=false;refreshEditBounds(editSelected);pickEdit(null);saveFurniture()};
 let customIndex=0;
