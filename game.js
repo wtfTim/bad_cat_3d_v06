@@ -553,7 +553,7 @@ editorPanel.innerHTML=`<header>🛠️ Редактор мира <button id="edT
  <canvas id="edPreview" width="300" height="200" style="width:100%;height:190px;border-radius:12px;background:#dce9eb;touch-action:none"></canvas>
  <div class="edLine"><button id="edAdd">＋ Добавить выбранное</button><button id="edSave">💾 Сохранить</button></div>
  <div class="edLine"><button id="edExport">⬇ Экспорт JSON</button><label class="edImport">⬆ Импорт JSON<input type="file" id="edImportFile" accept=".json,application/json" hidden></label></div>
- <div class="edLine"><button id="edStarter">🏡 Стартовая расстановка</button><button id="edReset">↺ Сбросить мебель</button></div>
+ <div class="edLine"><button id="edStarter">🏡 Стартовая расстановка</button><button id="edReset">↺ Вернуть мою расстановку</button></div>
  <div class="edSmall">Все перемещения сохраняются в браузере. Экспортируй JSON и пришли мне: я перенесу твою расстановку в исходный код игры.</div>
  </div>
  <div id="edWallTools" style="display:none">
@@ -1106,13 +1106,55 @@ async function applyStarter({automatic=false}={}){
  toast('🏡 Расставлено '+count+' объектов. Можешь двигать и сохранять их!');
 }
 document.getElementById('edStarter').onclick=()=>applyStarter();
+// This is the player's complete approved estate layout committed with the project.
+// Model files themselves remain in their respective asset packs.
+const BUILTIN_LAYOUT_KEY='badcat3d-builtin-layout-2026-10-25-v1';
+async function loadCommittedFurniture(){
+ const paths=Array.from({length:6},(_,i)=>'./layouts/builtin_furniture_part_'+(i+1)+'.json');
+ const responses=await Promise.all(paths.map(path=>fetch(path,{cache:'no-store'})));
+ for(let i=0;i<responses.length;i++)if(!responses[i].ok)throw Error('Missing bundled layout '+paths[i]+' ('+responses[i].status+')');
+ const parts=await Promise.all(responses.map(response=>response.json()));
+ const rows=parts.flat();
+ if(rows.length!==416)throw Error('Incomplete bundled layout: '+rows.length+' instead of 416');
+ const layout={},custom=[];
+ for(const row of rows){
+  if(!Array.isArray(row)||row.length!==8||!Number.isInteger(row[0])||typeof row[1]!=='string'||row[1].indexOf(':')<1||
+     !row.slice(2,7).every(Number.isFinite)||![0,1].includes(row[7]))throw Error('Invalid bundled furniture row');
+  const id='custom-'+row[0];
+  if(layout[id])throw Error('Duplicate bundled furniture '+id);
+  custom.push({id,name:row[1]});
+  layout[id]={pos:[row[2],row[3],row[4]],rot:row[5],scale:row[6],hidden:Boolean(row[7])};
+ }
+ return {layout,custom};
+}
+async function initializeCommittedFurniture(){
+ const builtin=await loadCommittedFurniture();
+ const existingLayout=localStorage.getItem(EDIT_SAVE_KEY);
+ const existingExtras=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
+ // Import the committed layout once, then let the editor retain later local changes.
+ // First import saves the older setup separately, never silently destroys it.
+ if(localStorage.getItem(BUILTIN_LAYOUT_KEY)!=='1'||!existingLayout||!existingExtras){
+  if(existingLayout&&localStorage.getItem(BUILTIN_LAYOUT_KEY)!=='1')localStorage.setItem(EDIT_SAVE_KEY+'-before-builtin',existingLayout);
+  if(existingExtras&&localStorage.getItem(BUILTIN_LAYOUT_KEY)!=='1')localStorage.setItem(EDIT_SAVE_KEY+'-extras-before-builtin',existingExtras);
+  localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(builtin.layout));
+  localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(builtin.custom));
+  localStorage.setItem(BUILTIN_LAYOUT_KEY,'1');
+  storedLayout=builtin.layout;
+  console.info('Bad Cat 3D: restored permanent project furniture layout ('+builtin.custom.length+' objects)');
+ }else{
+  // Existing positions are user edits to the committed layout and win.
+  storedLayout=JSON.parse(existingLayout);
+ }
+}
 const missingFurnitureModels=[];
 async function loadExtras(){
  try{
+  try{await initializeCommittedFurniture();}
+  catch(error){console.error('Could not load committed furniture layout; retaining browser save',error)}
   customEntries=JSON.parse(localStorage.getItem(EDIT_SAVE_KEY+'-extras')||'[]');
   if(!Array.isArray(customEntries))customEntries=[];
-  if(!customEntries.length&&!localStorage.getItem(STARTER_KEY)){
-    await applyStarter({automatic:true});return;
+  if(!customEntries.length){
+    console.warn('No project furniture layout available yet; keep current scene intact');return;
   }
   await extraCatalogReady;
   for(const c of customEntries){
@@ -1131,7 +1173,16 @@ async function loadExtras(){
  }
 }
 document.getElementById('edImportFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed.layout||typeof parsed.layout!=='object'||!Array.isArray(parsed.custom))throw Error('Invalid format');localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));location.reload()}catch(err){toast('⚠️ Неверный файл JSON');console.error(err)}};
-document.getElementById('edReset').onclick=()=>{if(confirm('Сбросить только расстановку мебели? Прогресс квестов сохранится.')){localStorage.removeItem(EDIT_SAVE_KEY);localStorage.removeItem(EDIT_SAVE_KEY+'-extras');localStorage.setItem(STARTER_KEY,'1');location.reload()}};
+document.getElementById('edReset').onclick=()=>{
+ if(!confirm('Восстановить твою сохранённую в проекте расстановку (416 объектов)? Текущие перемещения заменятся, прогресс квестов останется.'))return;
+ const before=localStorage.getItem(EDIT_SAVE_KEY),extras=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
+ if(before)localStorage.setItem(EDIT_SAVE_KEY+'-before-reset',before);
+ if(extras)localStorage.setItem(EDIT_SAVE_KEY+'-extras-before-reset',extras);
+ localStorage.removeItem(BUILTIN_LAYOUT_KEY);
+ localStorage.removeItem(EDIT_SAVE_KEY);
+ localStorage.removeItem(EDIT_SAVE_KEY+'-extras');
+ location.reload();
+};
 const rayPos=new THREE.Vector2();
 function editRay(event){const rect=renderer.domElement.getBoundingClientRect();rayPos.set(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);editHits.setFromCamera(rayPos,camera)}
 // Only objects in front of the first solid wall along the pointer ray are selectable.
