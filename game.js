@@ -1479,25 +1479,36 @@ function goSleep(){if(!playing)return;
  if(!nearby){toast('💤 Подойди к одной из своих кроватей');return}
  sleeping=4;energy=100;mood=Math.min(100,mood+12);slept=true;sound('sleep');toast('💤 Мурр... котик отдыхает');updateQuest();
 }
-function questInteract(){if(!playing)return;
- const x=cat.position.x,z=cat.position.z,near=(a,b,r=5)=>Math.hypot(x-a,z-b)<r;
- if(quests[questIndex]?.id==='eat'){stealFood();return}
- if(near(-9.5,16,4.3)){gardenBench=true;toast('🪑 Под лавкой записка: «Ищи следы среди деревьев…»')}
- else if(near(-20,27,6)){
-  if(!gardenTrail){gardenTrail=true;toast('🐾 Среди деревьев обнаружены загадочные следы')}
-  else{gardenClue=true;toast('🗺️ Под беседкой карта: сарай, гараж, теплица и клад!')}
+function questInteract(){
+ if(!playing)return;
+ const q=quests[questIndex];
+ if(!q){toast('🏆 Тайна сада раскрыта! Исследуй усадьбу дальше.');return}
+ if(q.id==='eat'){stealFood();return}
+ const targets={bench:4.3,tracks:6,map:6,shed:7,garage:8,greenhouse:8,treasure:5,gnome:5,
+  evidence:5,sauna:8,fountain:8,bone:6,bury:6};
+ if(!targets[q.id]){
+  toast('🐾 Для этого задания следуй подсказке: '+q.text);return;
  }
- else if(near(-42,-31,7)){shedSearched=true;toast('🧰 В сарае найдена лопатка для раскопок')}
- else if(near(38,-34,8)){garageSearched=true;toast('🔧 У верстака найден шифр с карты')}
- else if(near(-40,36,8)){greenhouseSearched=true;toast('🌱 В теплице найдена отметка тайника')}
- else if(near(-37,43)){if(!dugTreasure){dugTreasure=true;score+=8;sparks(x,.3,z,'hit');sound('hit');toast('⛏️ Клад откопан! +8 🐟')}else toast('Клад уже найден')}
- else if(near(-50,43)){if(!gnomeSaved){gnomeSaved=true;score+=2;toast('🧙 Садовый гном спасён!')}else toast('Гном уже спасён')}
- else if(near(-16,48)){if(!ate){toast('Для улик нужна еда из холодильника!');return}buriedFish=true;toast('🕳️ Рыбные улики спрятаны');sparks(x,.3,z,'tear')}
- else if(near(40,35,8)){saunaVisited=true;energy=Math.min(100,energy+20);toast('♨️ Отдохнул возле бани: +20 энергии')}
- else if(near(34,8,8)){bathed=true;mood=100;toast('⛲ Искупался у фонтана!')}
- else if(near(-55,-47,6)){dugBone=true;toast('🦴 Нашёл древнюю кость!')}
- else if(near(51,48,6)){if(!dugBone){toast('Сначала найди кость!');return}buriedBone=true;toast('🦴 Косточка спрятана!')}
- else {toast('🧭 Следуй к метке задания · ДЕЙСТВИЕ / X');return}
+ if(!nearQuest(q.at[0],q.at[1],targets[q.id])){
+  toast('🧭 Подойди ближе к метке текущего задания');return;
+ }
+ switch(q.id){
+ case 'bench': gardenBench=true;toast('🪑 Под лавкой записка: «Следы ведут к деревьям…»');break;
+ case 'tracks':gardenTrail=true;toast('🐾 У деревьев найдены загадочные следы');break;
+ case 'map':gardenClue=true;toast('🗺️ У беседки карта: сарай → гараж → теплица → клад!');break;
+ case 'shed':shedSearched=true;toast('🧰 В сарае нашлась лопатка для раскопок');break;
+ case 'garage':garageSearched=true;toast('🔧 В гараже найден шифр к тайнику');break;
+ case 'greenhouse':greenhouseSearched=true;toast('🌱 В теплице обнаружена отметка клада');break;
+ case 'treasure':dugTreasure=true;score+=8;sparks(cat.position.x,.3,cat.position.z,'hit');sound('hit');toast('⛏️ Нашёл клад! +8 🐟');break;
+ case 'gnome':gnomeSaved=true;score+=2;toast('🧙 Садовый гном спасён!');break;
+ case 'evidence':if(!ate){toast('Сперва укради вкусняшки из холодильника');return}
+  buriedFish=true;sparks(cat.position.x,.3,cat.position.z,'tear');toast('🕳️ Рыбные улики спрятаны');break;
+ case 'sauna':saunaVisited=true;energy=Math.min(100,energy+20);toast('♨️ Отдохнул у бани: +20 энергии');break;
+ case 'fountain':bathed=true;mood=100;toast('⛲ Освежился у фонтана!');break;
+ case 'bone':dugBone=true;sparks(cat.position.x,.3,cat.position.z,'hit');toast('🦴 Нашёл древнюю косточку');break;
+ case 'bury':if(!dugBone){toast('Сначала найди косточку');return}buriedBone=true;toast('🦴 Секрет надёжно закопан!');break;
+ default:return;
+ }
  updateQuest();setProgress();
 }
 function groom(){if(!playing)return;mood=Math.min(100,mood+3);toast('🧼 Умывание пока без анимации — скелет нового котика не поддерживает её')}
