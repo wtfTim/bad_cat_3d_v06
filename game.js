@@ -1302,17 +1302,30 @@ async function loadExtras(){
   if(!extraReady&&customEntries.some(c=>c.name&&!c.name.startsWith('tiny:')&&!c.name.startsWith('kenney:'))){
    throw Error('Не загружен assets/extra_catalog.json: недоступны дополнительные модели');
   }
-  for(const c of customEntries){
-   const number=Number(c.id.split('-')[1]);if(number>customIndex)customIndex=number;
-   try{await addCatalogItem(c.name,storedLayout[c.id],c.id)}
-   catch(e){
-    console.warn('Could not load custom item',c.name,e);
-    console.error('Model load failed:',c.name,'url:',ALL_CATALOG[c.name]||'(not in catalog)',e);
-    missingFurnitureModels.push(c.name);
+  // Process model instances in a bounded parallel queue instead of waiting
+  // for 416 separate requests one by one. The GLTF loaders already cache
+  // promises for repeated model names; all original IDs/poses stay unchanged.
+  const workers=Math.min(customEntries.length,
+   /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)?6:12);
+  let nextIndex=0;
+  async function furnitureWorker(){
+   while(nextIndex<customEntries.length){
+    const c=customEntries[nextIndex++];
+    const number=Number(c.id.split('-')[1]);if(number>customIndex)customIndex=number;
+    try{
+     await addCatalogItem(c.name,storedLayout[c.id],c.id);
+    }catch(e){
+     console.warn('Could not load custom item',c.name,e);
+     console.error('Model load failed:',c.name,'url:',ALL_CATALOG[c.name]||'(not in catalog)',e);
+     missingFurnitureModels.push(c.name);
+    }
+    loadingCount++;
+    updateFurnitureLoading();
+    // Let the browser paint progress and keep phone touch/animation responsive.
+    if(loadingCount%24===0)await new Promise(resolve=>setTimeout(resolve,0));
    }
-   loadingCount++;
-   updateFurnitureLoading();
   }
+  await Promise.all(Array.from({length:workers},()=>furnitureWorker()));
  if(missingFurnitureModels.length){
   console.warn('Missing furniture models:',missingFurnitureModels);
   throw Error('Не загрузились '+missingFurnitureModels.length+' предметов: '+missingFurnitureModels.slice(0,3).join(', '));
