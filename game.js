@@ -534,9 +534,9 @@ editorPanel.innerHTML=`<header>🛠️ Редактор мира <button id="edT
  <div class="edSmall">🧱 Выбирай стену мышью. Размеры в метрах. Изменения сохраняются отдельно от мебели.</div>
  <div class="edLine"><button id="edWallAdd">＋ Новая стена перед камерой</button></div>
  <div id="edWallSelected" class="edSmall">Выбери стену или добавь новую</div>
- <div class="edLine"><label>Длина <input id="edWallLength" type="number" min="0.4" max="30" step=".1" value="3" style="width:65px"></label>
- <label>Высота <input id="edWallHeight" type="number" min=".4" max="9" step=".1" value="2.7" style="width:65px"></label>
- <label>Толщина <input id="edWallThickness" type="number" min=".08" max="1.2" step=".02" value=".2" style="width:65px"></label></div>
+ <div class="edLine"><label style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:120px">Длина (<span id="edWallLengthValue">3</span> м)<input id="edWallLengthSlider" type="range" min="0.4" max="30" step="0.1" value="3" style="width:100%"><input id="edWallLength" type="number" min="0.4" max="30" step="0.1" value="3" style="width:100%"></label>
+ <label style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:120px">Высота (<span id="edWallHeightValue">2.7</span> м)<input id="edWallHeightSlider" type="range" min="0.4" max="9" step="0.1" value="2.7" style="width:100%"><input id="edWallHeight" type="number" min="0.4" max="9" step="0.1" value="2.7" style="width:100%"></label>
+ <label style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:120px">Толщина (<span id="edWallThicknessValue">0.2</span> м)<input id="edWallThicknessSlider" type="range" min="0.08" max="1.2" step="0.02" value="0.2" style="width:100%"><input id="edWallThickness" type="number" min="0.08" max="1.2" step="0.02" value="0.2" style="width:100%"></label></div>
  <div class="edLine"><label>Проём <select id="edWallOpening"><option value="none">Без проёма</option><option value="door">Дверной</option><option value="window">Оконный</option></select></label>
  <label>Ширина <input id="edWallOpeningWidth" type="number" min=".4" max="12" step=".1" value="1.2" style="width:65px"></label></div>
  <div class="edLine"><label>Высота проёма <input id="edWallOpeningHeight" type="number" min=".3" max="6" step=".1" value="2.2" style="width:65px"></label>
@@ -685,7 +685,7 @@ function wallRebuild(record){
   const box={x1:bb.min.x,x2:bb.max.x,y1:bb.min.y,y2:bb.max.y,z1:bb.min.z,z2:bb.max.z,source:'wall'};
   colliders.push(box);record.boxes.push(box);
  }
- if(wallHelper&&selectedWall===record){wallHelper.setFromObject(record.parts[0]||record.originalMesh);wallHelper.update();}
+ if(wallHelper&&selectedWall===record)wallUpdateOutline(record);
 }
 function wallRegister(id,data){
  const base=architecturalWallRecords.find(x=>x.id===id);
@@ -708,6 +708,17 @@ function wallRestoreAll(){
   if(data.deleted){record.deleted=true;wallRebuild(record)}
  }
 }
+function wallUpdateOutline(record){
+ if(!wallHelper||!record)return;
+ const bounds=new THREE.Box3();
+ for(const part of record.parts)bounds.expandByObject(part);
+ if(bounds.isEmpty()){
+  const d=record.data;
+  bounds.set(new THREE.Vector3(d.x-.2,d.y,d.z-.2),new THREE.Vector3(d.x+.2,d.y+.1,d.z+.2));
+ }
+ wallHelper.box.copy(bounds);
+ wallHelper.updateMatrixWorld(true);
+}
 function wallPick(record){
  selectedWall=record;
  if(wallHelper){scene.remove(wallHelper);wallHelper.geometry.dispose();wallHelper.material.dispose();wallHelper=null}
@@ -716,9 +727,15 @@ function wallPick(record){
  label.textContent=(record.id.startsWith('original-')?'🏠 Стена здания':'🧱 Новая стена')+' · '+record.id;
  for(const [key,field] of [['length','Length'],['height','Height'],['thickness','Thickness'],['opening','Opening'],['openingWidth','OpeningWidth'],['openingHeight','OpeningHeight'],['sill','Sill']]){
   wallField(field).value=record.data[key];
+  if(['Length','Height','Thickness'].includes(field)){
+   wallField(field+'Slider').value=record.data[key];
+   wallField(field+'Value').textContent=Number(record.data[key]).toFixed(field==='Thickness'?2:1);
+  }
  }
- if(record.parts.length){wallHelper=new THREE.BoxHelper(record.parts[0],0xffc538);scene.add(wallHelper)}
- else if(architecturalWallRecords.some(x=>x.id===record.id)){const base=architecturalWallRecords.find(x=>x.id===record.id);wallHelper=new THREE.BoxHelper(base.originalMesh,0xffc538);scene.add(wallHelper)}
+ if(record.parts.length){
+  wallHelper=new THREE.Box3Helper(new THREE.Box3(),0xffc538);
+  scene.add(wallHelper);wallUpdateOutline(record);
+ }
 }
 function wallSelectFromPointer(event){
  editRay(event);
@@ -732,7 +749,10 @@ function wallApplyChanges(update){
  if(!selectedWall)return toast('🧱 Сначала выбери стену');
  const d=selectedWall.data;
  Object.assign(d,update);
- wallRebuild(selectedWall);wallEdits.set(selectedWall.id,{...d,deleted:selectedWall.deleted});saveEditedWalls();wallPick(selectedWall);
+ wallRebuild(selectedWall);
+ wallEdits.set(selectedWall.id,{...d,deleted:selectedWall.deleted});
+ saveEditedWalls(); // Selection remains active; no form reset while dragging a slider.
+ const label=wallField('Selected');label.textContent=(selectedWall.id.startsWith('original-')?'🏠 Стена здания':'🧱 Новая стена')+' · '+selectedWall.id;
 }
 function switchEditorMode(isWalls){
  wallMode=isWalls;
@@ -757,6 +777,21 @@ wallField('Apply').onclick=()=>{
  const value=(field,min,max)=>THREE.MathUtils.clamp(Number(wallField(field).value)||min,min,max);
  wallApplyChanges({length:value('Length',.4,30),height:value('Height',.4,9),thickness:value('Thickness',.08,1.2),opening:wallField('Opening').value,openingWidth:value('OpeningWidth',.4,12),openingHeight:value('OpeningHeight',.3,6),sill:value('Sill',0,6)});
 };
+
+ // Live wall resizing: slider and numeric fields stay synchronized.
+ for(const [key,field,min,max] of [['length','Length',.4,30],['height','Height',.4,9],['thickness','Thickness',.08,1.2]]){
+  const slider=wallField(field+'Slider'),number=wallField(field),value=wallField(field+'Value');
+  function applyDimension(v){
+   const n=Number(v);
+   if(!Number.isFinite(n))return;
+   const next=THREE.MathUtils.clamp(n,min,max);
+   slider.value=String(next);number.value=String(next);
+   value.textContent=next.toFixed(field==='Thickness'?2:1);
+   if(selectedWall)wallApplyChanges({[key]:next});
+  }
+  slider.addEventListener('input',()=>applyDimension(slider.value));
+  number.addEventListener('change',()=>applyDimension(number.value));
+ }
 wallField('Rotate').onclick=()=>{if(selectedWall)wallApplyChanges({rotation:selectedWall.data.rotation+Math.PI/2})};
 for(const [button,dx,dz,dy] of [['Left',-.2,0,0],['Right',.2,0,0],['Forward',0,.2,0],['Back',0,-.2,0],['Up',0,0,.05],['Down',0,0,-.05]]){
  wallField(button).onclick=()=>{
