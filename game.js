@@ -833,11 +833,22 @@ let editorOn=false,editSelected=null,editHelper=null,editPointer=null,editPlane=
 const WALL_SAVE_KEY='badcat3d-walls-v1';
 const wallEdits=new Map(),wallRecords=new Map();
 let wallMode=false,selectedWall=null,wallHelper=null;
-let wallStored={};try{wallStored=JSON.parse(localStorage.getItem(WALL_SAVE_KEY)||'{}')||{}}catch(e){wallStored={}}
+// User-approved garage wall layout is built in for every fresh browser/device.
+// Local edits always override these defaults; they are never replaced at startup.
+const BUILTIN_GARAGE_WALLS={
+ 'original-484':{x:39.92570846636728,z:-27.47517190305986,y:0,length:5.1,height:3.4,thickness:.22,rotation:Math.PI,opening:'none',openingWidth:1.2,openingHeight:2.2,sill:1},
+ 'original-483':{x:31.544134055398604,z:-27.431654269313857,y:0,length:4.3,height:3.4,thickness:.22,rotation:0,opening:'none',openingWidth:1.2,openingHeight:2.2,sill:1}
+};
+let wallStored={...BUILTIN_GARAGE_WALLS};
+try{
+ const local=JSON.parse(localStorage.getItem(WALL_SAVE_KEY)||'{}')||{};
+ if(local&&typeof local==='object'&&!Array.isArray(local))wallStored={...wallStored,...local};
+}catch(e){console.warn('Could not read saved walls; built-in garage layout will be used',e)}
 const wallMat=material('#efe1c8');
 const wallField=(id)=>document.getElementById('edWall'+id);
 function saveEditedWalls(){
- const changes={};for(const [id,record] of wallEdits)changes[id]=record;
+ // Keep unchanged built-in garage walls included in export and subsequent edits.
+ const changes={...BUILTIN_GARAGE_WALLS};for(const [id,record] of wallEdits)changes[id]=record;
  const old=localStorage.getItem(WALL_SAVE_KEY);
  if(old)localStorage.setItem(WALL_SAVE_KEY+'-last-backup',old);
  localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(changes));
