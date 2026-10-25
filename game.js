@@ -45,7 +45,7 @@ function refreshEditBounds(piece){
   const inset=Math.min(.06,(bb.max.x-bb.min.x)*.12,(bb.max.z-bb.min.z)*.12);
   b.x1=bb.min.x+inset;b.x2=bb.max.x-inset;b.z1=bb.min.z+inset;b.z2=bb.max.z-inset;
   b.y1=bb.min.y;
-  b.y2=piece.fullHeightCollider?bb.max.y:Math.min(bb.max.y,Math.max(bb.min.y+.1,piece.holder.position.y+1.8));
+  b.y2=piece.fullHeightCollider?bb.max.y:piece.surface?piece.surface.y:Math.min(bb.max.y,Math.max(bb.min.y+.1,piece.holder.position.y+1.8));
   if(piece.removed){b.y1=999;b.y2=1000;}
   }
  }
@@ -246,7 +246,7 @@ function isBlocked(x,z,feet,r=CAT_RADIUS,height=.70,sourceFilter=null){
    // by taller decorative backs or armrests of the same furniture piece.
    const supported=walkableSurfaces.some(s=>s!==null&&s.y>-998&&
      Math.abs(s.y-feet)<.11&&x>s.x1-.08&&x<s.x2+.08&&z>s.z1-.08&&z<s.z2+.08&&
-     s.x1<=b.x1+.12&&s.x2>=b.x2-.12&&s.z1<=b.z1+.12&&s.z2>=b.z2-.12);
+     s.colliderRef===b);
    if(!supported)return true;
   }
  }
@@ -407,8 +407,12 @@ async function placeTiny(entry,id){
  const piece={model:name.replace(/^TinyLiving_|^TinytLiving_/,'').replace(/_[0-9]+$/,''),holder,kind:'tiny',action,level:floor,floorY:floor,bounds:bb,height:bb.max.y-bb.min.y,used:false,vy:0,vx:0,vz:0,collider:null};
  if(solid){const inset=Math.min(.08,(bb.max.x-bb.min.x)*.12,(bb.max.z-bb.min.z)*.12); const b={x1:bb.min.x+inset,x2:bb.max.x-inset,z1:bb.min.z+inset,z2:bb.max.z-inset,y1:Math.max(floor,bb.min.y),y2:Math.min(bb.max.y,floor+1.8),source:'tiny'}; if(b.x1<b.x2&&b.z1<b.z2){colliders.push(b); addDebugBox(b); piece.collider=b;}}
  if(piece.collider&&!/art|painting|wall|mirror|rug|carpet/i.test(name)){
-  piece.fullHeightCollider=true;piece.collider.y2=bb.max.y;
-  piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:bb.max.y,fullTop:true};
+  const seating=/chair|bench|loveseat|sofa|pouffe|sitting|stool/i.test(name);
+  const seatY=seating?Math.min(bb.max.y,bb.min.y+.55):bb.max.y;
+  piece.collider.y2=seatY;
+  piece.fullHeightCollider=!seating;
+  piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:seatY,fullTop:!seating,colliderRef:piece.collider};
+  if(seating)piece.seatHeight=seatY-piece.holder.position.y;
   walkableSurfaces.push(piece.surface);
  }
  if(action)interactables.push(piece); loaded++;registerEditable(id,piece,'Tiny Living · '+piece.model);
@@ -564,16 +568,17 @@ async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
   else if(kind==='table')seat=bb.max.y-.06;
   if(seat!=null){blockTop=Math.min(blockTop,seat);furniturePiece.seatHeight=blockTop-floor;furniturePiece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:blockTop};walkableSurfaces.push(furniturePiece.surface)}
   const box={x1:bb.min.x+.02,x2:bb.max.x-.02,z1:bb.min.z+.02,z2:bb.max.z-.02,y1:bb.min.y,y2:blockTop,source:'furniture'};
-  colliders.push(box);addDebugBox(box);furniturePiece.collider=box;
+  colliders.push(box);addDebugBox(box);furniturePiece.collider=box;if(furniturePiece.surface)furniturePiece.surface.colliderRef=box;
  }
  // Full-height model collision plus top support for furniture not already marked as a seat/table.
  if(furniturePiece.collider&&kind!=='decor'&&kind!=='rug'){
-  furniturePiece.fullHeightCollider=true;
-  furniturePiece.collider.y2=bb.max.y;
+  furniturePiece.fullHeightCollider=!furniturePiece.surface;
+  if(!furniturePiece.surface)furniturePiece.collider.y2=bb.max.y;
   if(!furniturePiece.surface){
    furniturePiece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:bb.max.y,fullTop:true};
    walkableSurfaces.push(furniturePiece.surface);
   }
+  furniturePiece.surface.colliderRef=furniturePiece.collider;
  }
  if(action)interactables.push(furniturePiece);
  loaded++;registerEditable(id,furniturePiece,'Kenney · '+model);
@@ -611,9 +616,14 @@ async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action
   const inset=Math.min(.035,(bb.max.x-bb.min.x)*.035,(bb.max.z-bb.min.z)*.035);
   const b={x1:bb.min.x+inset,x2:bb.max.x-inset,z1:bb.min.z+inset,z2:bb.max.z-inset,y1:bb.min.y,y2:bb.max.y,source:'garden'};
   if(b.x1<b.x2&&b.z1<b.z2){
-   colliders.push(b);addDebugBox(b);piece.collider=b;piece.fullHeightCollider=true;
+   colliders.push(b);addDebugBox(b);piece.collider=b;
    // When jumping onto a physical object, the top supports the cat.
-   piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:bb.max.y,fullTop:true};
+   const seating=/bench|chair|sofa|stool|seat/i.test(keyName);
+   const seatY=seating?Math.min(bb.max.y,bb.min.y+.56):bb.max.y;
+   b.y2=seatY;
+   piece.fullHeightCollider=!seating;
+   piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:seatY,fullTop:!seating,colliderRef:b};
+   if(seating)piece.seatHeight=seatY-piece.holder.position.y;
    walkableSurfaces.push(piece.surface);
   }
  }
