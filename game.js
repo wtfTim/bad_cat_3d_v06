@@ -77,41 +77,75 @@ function addBox(w,h,d,mat,x,y,z,{wall=false,top=false}={}){
 }
 function ball(r,mat,x,y,z,parent,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m}
 function column(a,b,h,mat,x,y,z,parent){const m=new THREE.Mesh(new THREE.CylinderGeometry(a,b,h,10),mat);m.position.set(x,y,z);parent.add(m);return m}
-// Architectural floor plan: x<0 is kitchen/living, x>0 dining/hall.
-// Doorway gaps deliberately remain at x=0 around z=0 and z=0 around x=-.4 and x=7.
+// v2.1: Joined floors and actual holes for glazed windows.
 addBox(22,.28,18,mats.floor,0,-.14,0,{top:true});
 addBox(16,.25,18,mats.floor,-3,F-.125,0,{top:true});
-addBox(6,.25,10,mats.floor,8,F-.125,-4,{top:true}); // open stairwell upstairs
-for(const h0 of [0,F]){
- addBox(22,2.7,.24,mats.wall,0,h0+1.35,-9,{wall:true});
- addBox(.24,2.7,18,mats.wall,-11,h0+1.35,0,{wall:true});
- addBox(.24,2.7,18,mats.wall,11,h0+1.35,0,{wall:true});
- if(h0===0){
-   addBox(12.2,2.7,.22,mats.wall,-5.05,1.35,9,{wall:true});
-   addBox(5.1,2.7,.22,mats.wall,8.45,1.35,9,{wall:true});
-   addBox(3.05,.24,.22,mats.wall,2.45,2.58,9,{wall:true});
-   addBox(1.42,2.22,.07,glassMat,-7.1,1.62,9.12);
-   addBox(1.42,2.22,.07,glassMat,7.55,1.62,9.12);
- } else {
-   addBox(22,2.7,.22,mats.wall,0,h0+1.35,9,{wall:true});
-   addBox(2.2,1.4,.07,glassMat,-6.8,h0+1.55,9.12);
-   addBox(2.2,1.4,.07,glassMat,6.8,h0+1.55,9.12);
+addBox(6,.25,10,mats.floor,8,F-.125,-4,{top:true});
+const mainWindowGlass=new THREE.MeshPhysicalMaterial({color:'#a9dcec',roughness:.12,transparent:true,opacity:.65,side:THREE.DoubleSide});
+const windowTrim=material('#fcf5e9');
+function sectionZ(x0,x1,z,b,t){
+ if(x1>x0+.01&&t>b+.01)addBox(x1-x0,t-b,.24,mats.wall,(x0+x1)/2,(b+t)/2,z,{wall:true});
+}
+function sectionX(z0,z1,x,b,t){
+ if(z1>z0+.01&&t>b+.01)addBox(.24,t-b,z1-z0,mats.wall,x,(b+t)/2,(z0+z1)/2,{wall:true});
+}
+function glassZ(x,z,b,w=2){
+ const lo=b+1.0,hi=b+2.33;
+ sectionZ(x-w/2,x+w/2,z,b,lo);sectionZ(x-w/2,x+w/2,z,hi,b+F);
+ addBox(w-.1,hi-lo-.10,.06,mainWindowGlass,x,(lo+hi)/2,z+Math.sign(z)*.135,{wall:true});
+ addBox(w+.16,.12,.32,mats.wood,x,lo,z+Math.sign(z)*.16);
+ addBox(.065,hi-lo,.12,windowTrim,x,(lo+hi)/2,z+Math.sign(z)*.17);
+ for(const side of [-1,1])addBox(.085,hi-lo,.12,windowTrim,x+side*w/2,(lo+hi)/2,z+Math.sign(z)*.17);
+}
+function glassX(z,x,b,w=2){
+ const lo=b+1.0,hi=b+2.33;
+ sectionX(z-w/2,z+w/2,x,b,lo);sectionX(z-w/2,z+w/2,x,hi,b+F);
+ addBox(.06,hi-lo-.10,w-.10,mainWindowGlass,x+Math.sign(x)*.135,(lo+hi)/2,z,{wall:true});
+ addBox(.32,.12,w+.15,mats.wood,x+Math.sign(x)*.17,lo,z);
+ for(const side of [-1,1])addBox(.12,hi-lo,.085,windowTrim,x+Math.sign(x)*.17,(lo+hi)/2,z+side*w/2);
+}
+function faceZ(z,b,door){
+ const holes=[[-7,2.0,'window'],[7.3,2.0,'window']];
+ if(door)holes.push([2.7,2.7,'door']);
+ holes.sort((a,b)=>a[0]-b[0]);
+ let last=-11;
+ for(const [x,w,type] of holes){
+  sectionZ(last,x-w/2,z,b,b+F);
+  if(type==='window')glassZ(x,z,b,w);
+  else{
+    sectionZ(x-w/2,x+w/2,z,b+2.65,b+F);
+    for(const side of [-1,1])addBox(.10,2.65,.20,windowTrim,x+side*(w/2+.04),b+1.325,z+.09);
+    addBox(w,.12,.25,windowTrim,x,b+2.64,z+.09);
+  }
+  last=x+w/2;
  }
- function wallX(z1,z2){addBox(.18,2.7,z2-z1,mats.divider,0,h0+1.35,(z1+z2)/2,{wall:true})}
- function wallZ(x1,x2){addBox(x2-x1,2.7,.18,mats.divider,(x1+x2)/2,h0+1.35,0,{wall:true})}
- wallX(-9,-1.4);wallX(1.2,9);wallZ(-11,-2.2);wallZ(1.5,5.8);wallZ(8.2,11);
+ sectionZ(last,11,z,b,b+F);
 }
-// Finalise the player's house: glazed entrance, extra side windows and a proper roof.
+function faceX(x,b){
+ let last=-9;
+ for(const z of [-5,5]){
+  sectionX(last,z-1,x,b,b+F);glassX(z,x,b,2);last=z+1;
+ }
+ sectionX(last,9,x,b,b+F);
+}
+for(const b of [0,F]){
+ faceZ(-9,b,false);faceZ(9,b,b===0);
+ faceX(-11,b);faceX(11,b);
+ function partitionX(a,c){addBox(.18,F,c-a,mats.divider,0,b+F/2,(a+c)/2,{wall:true})}
+ function partitionZ(a,c){addBox(c-a,F,.18,mats.divider,(a+c)/2,b+F/2,0,{wall:true})}
+ partitionX(-9,-1.4);partitionX(1.2,9);
+ partitionZ(-11,-2.2);partitionZ(1.5,5.8);partitionZ(8.2,11);
+}
+// Ridge and matching pitched panels sit above the 7.10m second floor.
 for(const side of [-1,1]){
- addBox(1.08,1.42,.07,glassMat,side*10.88,1.62,5.6);
- addBox(1.08,1.42,.07,glassMat,side*10.88,1.62,-4.8);
- addBox(1.08,1.30,.07,glassMat,side*10.88,F+1.55,5.8);
+ const slab=addBox(23.2,.22,9.5,mats.roof,0,2*F+.38,side*4.45);
+ slab.rotation.x=side*.15;roofPieces.push({mesh:slab,x:0,z:0});
 }
-for(const sx of [1.73,3.17]){addBox(1.28,2.15,.05,glassMat,sx,1.46,9.11);addBox(.08,2.25,.09,mats.trim,sx-.64,1.47,9.10);addBox(.08,2.25,.09,mats.trim,sx+.64,1.47,9.10)}
-addBox(2.7,.10,.20,mats.trim,2.45,2.47,9.08);
-for(const sign of [-1,1]){const slab=addBox(23.2,.21,10.8,mats.roof,0,F*2+.22,sign*4.55);slab.rotation.x=sign*.17;roofPieces.push({mesh:slab,x:0,z:0})}
-addBox(22.4,.16,.42,mats.trim,0,F*2.08,-.1);
-addBox(22.4,.16,.42,mats.trim,0,F*2.08,8.9);
+addBox(23.1,.14,.26,mats.trim,0,2*F+1.10,0);
+for(const y of [F,2*F]){
+ addBox(22.25,.14,.29,windowTrim,0,y,9.02);
+ addBox(22.25,.14,.29,windowTrim,0,y,-9.02);
+}
 // Each step has floor support; there are NO old sofa/table/bed colliders here.
 const stairSteps=14,stepDepth=.47;
 for(let k=0;k<stairSteps;k++){
@@ -126,13 +160,7 @@ const grass=material('#87b768'),grassDeep=material('#548f58'),pathMat=material('
 // Walkable terrain surrounds the house and includes the side and back gardens.
 addBox(140,.12,140,grass,0,-.19,0,{top:true});
 function outdoorsBox(w,h,d,mat,x,y,z,{solid=false,top=false}={}){return addBox(w,h,d,mat,x,y,z,{wall:solid,top})}
-// Front porch and entrance: centered at x=2.7, z=9, unobstructed corridor through to lawn.
-outdoorsBox(2.9,.035,8.6,pathMat,2.7,-.005,13.4);
-for(let z=10.1;z<17.7;z+=1.5)outdoorsBox(.1,.038,2.85,material('#b2a084'),2.7,.019,z);
-outdoorsBox(6.4,.032,1.55,pathMat,0,0,16.55);
-// Curving-feel paths at both sides, kept well outside the house footprint.
-for(let z=-13;z<=13;z+=2.1){outdoorsBox(1.18,.025,1.85,pathMat,-13.3,-.001,z);outdoorsBox(1.18,.025,1.85,pathMat,13.45,-.001,z)}
-outdoorsBox(27,.02,1.4,pathMat,0,-.01,-12.6);
+// Outdoor paths are authored exclusively in the world editor.
 // Perimeter fence; front gate at x=2.7. All sections have matching actual colliders.
 function fenceX(a,b,z){for(let x=a+.42;x<b;x+=1.4){outdoorsBox(.18,1.35,.2,fenceMat,x,.68,z,{solid:true});}outdoorsBox(b-a,.14,.16,fenceMat,(a+b)/2,.94,z,{solid:true});outdoorsBox(b-a,.14,.16,fenceMat,(a+b)/2,.33,z,{solid:true})}
 function fenceZ(a,b,x){for(let z=a+.42;z<b;z+=1.4)outdoorsBox(.2,1.35,.18,fenceMat,x,.68,z,{solid:true});outdoorsBox(.16,.14,b-a,fenceMat,x,.94,(a+b)/2,{solid:true});outdoorsBox(.16,.14,b-a,fenceMat,x,.33,(a+b)/2,{solid:true})}
@@ -155,19 +183,14 @@ function setProgress(){HUD.score.textContent=score;HUD.count.textContent=chaos;H
 // The neighborhood story: progress is persistent and every mission has a real place.
 let streetKnocks=0,dugTreasure=false,buriedFish=false,boughtMilk=false,bathed=false,gnomeSaved=false,dugBone=false,buriedBone=false,neighborSlept=false,parkScratched=false,marketFood=false;
 const quests=[
- {text:'ВЫЙДИ В БОЛЬШОЙ САД',at:[3,15],done:()=>cat.position.z>13},
- {text:'УРОНИ САДОВЫЙ ГОРШОК (E)',at:[-16,35],done:()=>streetKnocks>=1},
- {text:'УКРАДИ ЕДУ ИЗ ХОЛОДИЛЬНИКА (G)',at:[-9,-7],done:()=>ate},
- {text:'ОТКОПАЙ КЛАД У ТЕПЛИЦЫ (X)',at:[-37,43],done:()=>dugTreasure},
- {text:'ЗАКОПАЙ УЛИКИ У ГРЯДОК (X)',at:[-16,48],done:()=>buriedFish},
- {text:'ПОЦАРАПАЙ САДОВУЮ ЛАВКУ (F)',at:[-2,45],done:()=>parkScratched},
- {text:'ЗАГЛЯНИ В ГАРАЖ',at:[38,-34],done:()=>Math.hypot(cat.position.x-38,cat.position.z+34)<6},
- {text:'ПОСПИ В СВОЕЙ СПАЛЬНЕ (H)',at:[-6,5],done:()=>slept},
- {text:'ОПРОКИНЬ 3 УЛИЧНЫХ ПРЕДМЕТА (E)',at:[-30,-20],done:()=>streetKnocks>=3},
- {text:'НАЙДИ ГНОМА В САДУ (X)',at:[-50,43],done:()=>gnomeSaved},
- {text:'ИСКУПАЙСЯ В БАССЕЙНЕ (X)',at:[34,8],done:()=>bathed},
- {text:'ОТКОПАЙ ТАЙНУЮ КОСТОЧКУ (X)',at:[-55,-47],done:()=>dugBone},
- {text:'ЗАКОПАЙ КОСТОЧКУ В ТАЙНИКЕ (X)',at:[51,48],done:()=>buriedBone}
+ {text:'ВЫЙДИ В БОЛЬШОЙ ДВОР',at:[3,15],done:()=>cat.position.z>13},
+ {text:'ЗАЙДИ В ГАРАЖ',at:[38,-34],done:()=>Math.hypot(cat.position.x-38,cat.position.z+34)<5},
+ {text:'ПОСЕТИ САРАЙ',at:[-42,-31],done:()=>Math.hypot(cat.position.x+42,cat.position.z+31)<4},
+ {text:'ЗАГЛЯНИ В БАНЮ',at:[40,35],done:()=>Math.hypot(cat.position.x-40,cat.position.z-35)<4},
+ {text:'ПРОВЕРЬ ТЕПЛИЦУ',at:[-40,36],done:()=>Math.hypot(cat.position.x+40,cat.position.z-36)<4},
+ {text:'ВЕРНИСЬ К КРЫЛЬЦУ',at:[3,12],done:()=>Math.hypot(cat.position.x-3,cat.position.z-12)<4},
+ {text:'ПОСПИ ДОМА (H)',at:[-7,5],done:()=>slept},
+ {text:'ПОЦАРАПАЙ РАССТАВЛЕННЫЙ ТОБОЙ ПРЕДМЕТ (F)',at:[0,5],done:()=>scratched}
 ];
 function updateQuest(){while(questIndex<quests.length&&quests[questIndex].done()){questIndex++;score+=7;energy=Math.min(100,energy+5);toast('🏆 Миссия пройдена! +7 рыбок')}
  const q=quests[questIndex];HUD.quest.textContent=q?`${questIndex+1}/${quests.length} · ${q.text}`:'🏆 ВСЕ 13 МИССИЙ ВЫПОЛНЕНЫ!';
@@ -279,24 +302,7 @@ function ownerAI(dt){const d=Math.hypot(owner.position.x-cat.position.x,owner.po
 // ------------------------------------------------------------------
 // Kenney model placement. All positions are authored for THIS layout;
 // small countertop props use the surface height of the piece below them.
-const layout=[
- // Keep only the specialised appliances/fixtures from Kenney; all major furniture comes from the Tiny Living pack.
- ['kitchenFridgeLarge',-9.50,-7.30,0,1.18,.92,2.14,0,'solid',''],
- ['kitchenSink',-9.48,-5.05,0,1.00,1.02,1.06,0,'solid',''],
- ['kitchenStove',-9.48,-2.95,0,1.00,1.02,1.06,0,'solid','scratch'],
- ['kitchenCabinet',-7.82,-7.55,0,1.02,1.04,1.06,0,'solid','scratch'],
- ['kitchenCabinet',-6.20,-7.55,0,1.02,1.04,1.06,0,'solid','scratch'],
- ['kitchenMicrowave',-7.82,-7.55,1.06,.64,.54,.40,0,'prop','knock'],
- ['kitchenCoffeeMachine',-6.20,-7.55,1.06,.42,.54,.52,0,'prop','knock'],
- ['bathroomMirror',-10.55,-3.60,F+1.36,.75,.15,1.08,Math.PI/2,'decor',''],
- ['rugDoormat',2.55,10.7,0,2.35,1.45,.03,0,'rug',''],
- ['rugRectangle',-6.55,4.9,0,5.1,3.6,.03,0,'rug',''],
- ['rugRounded',-6.55,4.8,F,4.4,4.0,.03,0,'rug',''],
- ['rugSquare',-5.4,-4.6,F,1.9,1.9,.03,0,'rug',''],
- ['rugRectangle',5.0,-5.25,F,4.2,3.0,.03,0,'rug',''],
- ['rugRound',3.0,5.1,F,3.0,3.0,.03,0,'rug','']
-];
-;
+const layout=[]; // All placed furniture is managed by player JSON saves.
 const GLB_BASE='./assets/kenney/';const loader=new GLTFLoader(),modelPromises=new Map();
 function getModel(name){if(!modelPromises.has(name))modelPromises.set(name,loader.loadAsync(ALL_CATALOG['kenney:'+name]||GLB_BASE+name+'.glb'));return modelPromises.get(name)}
 
@@ -323,16 +329,7 @@ async function placeTiny(entry,id){
  if(action)interactables.push(piece); loaded++;registerEditable(id,piece,'Tiny Living · '+piece.model);
  return piece;
 }
-const tinyMainLayout=[
- ['TinyLiving_ContemporaryCarpet_40',-4.7,4.3,0,2.2,1.6,.03,0,'rug','',false],
- ['TinyLiving_TheModernDeskLamp_23',-9.48,7.03,.53,.35,.35,.48,0,'prop','knock',false],
- ['TinyLiving_BotanicalBookends_5',-6.1,-7.98,1.10,.46,.23,.39,0,'prop','tear',false],
- ['TinyLiving_SimpleandCleanArt_39',-8.2,8.92,0,1.25,.15,.83,0,'decor','',false],
- ['TinyLiving_DonTrippLightFixture_19',-5.1,-4.0,2.25,.75,.75,.48,0,'decor','',false],
- ['TinyLiving_ModernPouffe_36',-3.25,4.8,F,.65,.65,.55,0,'chair','scratch',true],
- ['TinyLiving_JustALittlePeek_18',-6.9,8.95,F,1.25,.20,.9,0,'decor','',false],
- ['TinyLiving_TheModernDeskLamp_23',2.35,-7.65,F+.62,.33,.33,.48,0,'prop','knock',false]
-];
+const tinyMainLayout=[];
 function neighborTinyLayoutFor(x,z,id){ const rotFront=Math.PI; const out=[]; const v=id%4;
  out.push(['TinyLiving_Space-SavingSingle_13',x-3.8,z-3.65,0,2.55,2.25,1.45,0,'bed','scratch',true]);
  out.push(['TinyLiving_PowerTowerDresser_24',x-4.85,z+2.75,0,1.08,.60,1.28,Math.PI/2,'solid','scratch',true]);
@@ -393,55 +390,17 @@ function estateBuilding(b){
  addBox(3.4,.52,.22,m,x,H-.26,z+d/2,{wall:true});
  for(const side of [-1,1]){addBox(1.5,1.2,.05,windowMat,x+side*w*.33,1.8,z+d/2+.14);addBox(.13,2.6,.17,trimMat,x+side*1.75,1.3,z+d/2+.15)}
  for(const side of [-1,1]){const slab=addBox(w+1,.18,d/2+.8,roof,x,H+.45,z+side*d/4);slab.rotation.x=side*.14;roofPieces.push({mesh:slab,x,z})}
- addBox(1.7,.85,.8,material('#aa815d'),x-w/2+1.4,.42,z-1.4,{top:true});streetCollider(x-w/2+1.4,z-1.4,1.7,.8,.85);
+
 }
 for(const b of estateBuildings)estateBuilding(b);
 // Furnish the actual estate outbuildings from the existing Tiny Living pack.
 // Positions are inside their accessible doorways; furniture stays editable.
-const estateInteriorLayout=[
- // Garage: tools, workbench-style desk and storage.
- ['TinyLiving_TinyDeskForTinyLiving_37',38,-37.6,0,2.15,1.0,1.0,0,'table','scratch',true],
- ['TinyLiving_TieredShelf_29',32.1,-34.6,0,1.1,.55,1.8,Math.PI/2,'solid','scratch',true],
- ['TinyLiving_StubbyCubbyDresser_38',42.8,-37.0,0,1.2,.6,1.1,0,'solid','knock',true],
- // Shed: shelves, a practical table and a chair.
- ['TinyLiving_OpenShelf_31',-46.3,-32.8,0,1.1,.6,1.35,Math.PI/2,'solid','scratch',true],
- ['TinyLiving_TinyDeskForTinyLiving_37',-41.3,-33.2,0,1.7,.88,.95,0,'table','scratch',true],
- // Sauna: a small lounge area and a sink.
- ['TinyLiving_LovelyLoveseat_12',37.5,32.7,0,2.35,1.1,1.35,0,'sofa','scratch',true],
- ['TinyLiving_TheSinkzBathroomVanity_32',44.4,33.0,0,1.05,.68,.95,Math.PI/2,'solid','scratch',true],
- ['TinyLiving_LampWithoutStorage_20',35.7,36.2,0,.48,.48,1.6,0,'solid','knock',true],
- // Greenhouse: stands with real plants and garden furniture.
- ['TinyLiving_VerticalMiniGarden_27',-45.8,33.0,0,1.25,.74,1.65,Math.PI/2,'solid','knock',true],
- ['TinyLiving_MyKindaZen_22',-38.0,33.3,0,1.35,.8,1.5,0,'solid','knock',true],
- ['TinyLiving_TieredShelf_29',-34.6,35.1,0,1.25,.55,1.7,-Math.PI/2,'solid','scratch',true]
-];
-
-const paving=material('#ccba9e'),poolWater=new THREE.MeshStandardMaterial({color:'#59bde1',roughness:.15,transparent:true,opacity:.82});
-for(const [x,z,w,d] of [[20,-32,26,3],[-23,-31,24,2.4],[23,35,25,2.6],[-24,36,22,2.6],[0,25,3,34],[23,0,3,63]])outdoorsBox(w,.03,d,paving,x,-.01,z);
-outdoorsBox(19,.18,14,material('#ddd4c5'),34,.06,8);
-outdoorsBox(15,.04,10,poolWater,34,.17,8);
-for(const [x,z] of [[23,1],[23,15],[45,1],[45,15]])streetThing('Шезлонг',x,z,'scratch',{shape:'bench',solid:true});
-for(const x of [-8,-4,0,4,8]){
- outdoorsBox(3.1,.12,5.8,soilMat,x,-.015,36);
- for(let z=34;z<=38;z+=2)ball(.3,material('#6caa55'),x,.28,z,house,1,1,.85);
-}
-for(const [x,z] of [[-50,8],[-48,20],[-48,52],[-26,52],[1,51],[53,-43],[53,40],[12,-48],[-30,-51]]){
- column(.3,.35,3,material('#84633b'),x,1.5,z,house);ball(2,material('#529e63'),x,3.7,z,house);streetCollider(x,z,.7,.7,2.5);
-}
-for(const [x,z] of [[-16,35],[-19,39],[-26,34],[-30,-20],[21,39],[31,46],[49,31],[-41,-12]])
- streetThing('Садовый горшок',x,z,'knock',{shape:'plant',solid:true});
-streetThing('Садовая лавка',-2,45,'scratch',{shape:'bench',solid:true});
-streetThing('Садовый гном',-50,43,'none',{shape:'gnome'});
-column(2.4,2.4,.28,material('#d7d2cb'),-7,.01,-45,house);
-column(2,2,.05,poolWater,-7,.18,-45,house);
-streetThing('Ящик с инструментами',-37,-22,'knock',{solid:true});
-for(const [x,z] of [[-37,43],[-16,48],[-55,-47],[51,48]]){
- const mound=new THREE.Mesh(new THREE.SphereGeometry(.58,12,8),soilMat);mound.position.set(x,.06,z);mound.scale.y=.2;house.add(mound);
-}
+const estateInteriorLayout=[];
+// No procedural scenery, pool, planted beds, paths or trees.
 for(const c of colliders.slice(oldDistrictColliderCount))if(c.source==='wall')addDebugBox(c);
 
 const stage=document.createElement('div');stage.style.cssText='position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:10;background:#fff9eedd;color:#47374a;border-radius:12px;padding:7px 12px;font:700 12px system-ui;pointer-events:none';
-stage.textContent='🏠 Загружаем Tiny Living мебель, двор и район...' ;document.body.append(stage);
+stage.textContent='🏠 Подготавливаем дом и твои сохранённые объекты...' ;document.body.append(stage);
 let loaded=0,failed=0;
 async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
  const result=await getModel(model);const obj=result.scene.clone(true);obj.updateMatrixWorld(true);
@@ -469,56 +428,7 @@ async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
 }
 // Imported garden: models are deliberately positioned beyond the house footprint.
 // tuple: pack, file, display name, x, z, max width, max depth, max height, angle, action, solid
-const gardenLayout=[
- ['patio','gazebo','Беседка',-8.0,13.7,4.0,3.8,3.1,0,'scratch',true],
- ['patio','patio_sofa','Уличный диван',-9.1,14.7,2.1,.9,1.05,Math.PI,'scratch',true],
- ['patio','coffee_table_wicker','Плетёный столик',-7.0,14.0,1.0,.8,.65,0,'knock',true],
- ['patio','wicker_armchair','Плетёное кресло',-6.4,15.55,.85,.85,1.15,-.45,'scratch',true],
- ['patio','patio_umbrella','Садовый зонт',8.5,14.7,2.6,2.6,3.0,0,'knock',false],
- ['patio','dining_table_6','Уличный обеденный стол',8.5,13.6,2.5,1.6,1.45,0,'scratch',true],
- ['patio','adirondack_chair','Садовое кресло',5.9,15.7,.9,1.0,1.2,.3,'scratch',true],
- ['patio','garden_bench','Лавочка',-5.4,-13.4,2.1,.8,1.3,0,'scratch',true],
- ['patio','bbq_grill','Мангал',9.5,-12.1,1.25,1.0,1.45,0,'knock',true],
- ['patio','picnic_table','Стол для пикника',6.6,-13.5,2.45,1.65,1.1,0,'scratch',true],
- ['patio','hammock_stand','Гамак',-8.2,-13.25,3.5,1.5,1.65,.2,'scratch',true],
- ['patio','planter_box','Цветочная клумба',-3.3,15.9,1.4,.7,.8,0,'knock',true],
- ['patio','raised_bed','Грядка',-13.35,-8.9,1.7,1.3,.75,0,'tear',true],
- ['patio','garden_gnome','Садовый гном',-11.2,13.3,.48,.43,.75,0,'knock',false],
- ['patio','mailbox_post','Почтовый ящик',4.8,16.3,.68,.6,1.55,0,'knock',true],
- ['patio','bird_bath','Поилка для птиц',11.7,15.9,.78,.78,1.3,0,'knock',true],
- ['patio','garden_lantern','Фонарь',-4.8,16.3,.46,.46,1.25,0,'knock',false],
- ['market','03_Plant_Shelf','Полка с растениями',-12.7,13.6,1.3,.65,1.75,Math.PI/2,'scratch',true],
- ['market','09_Flower_Pot','Цветочный горшок',-3.45,11.2,.53,.53,.8,0,'knock',false],
- ['market','08_Herb_Pot','Горшок с травами',-5.0,11.3,.46,.46,.65,0,'knock',false],
- ['market','07_Terracotta_Pot','Глиняный горшок',11.3,11.1,.55,.55,.64,0,'knock',false],
- ['market','11_Apple_Crate','Ящик с яблоками',-12.0,11.2,.85,.73,.72,0,'tear',true],
- ['market','10_Empty_Crate','Деревянный ящик',-12.0,10.0,.82,.71,.7,0,'tear',true],
- ['market','12_Watering_Can','Лейка',-11.0,15.2,.5,.36,.5,0,'knock',false],
- ['market','15_Wheelbarrow','Тачка',-13.2,-12.5,1.25,2.0,1.2,.45,'knock',true],
- ['market','16_Herb_Planter','Огородный ящик',-15.1,-7.2,1.4,.8,.75,0,'tear',true],
- ['market','18_Wood_Barrel','Бочка',12.6,-12.0,.85,.85,1.13,0,'knock',true],
- ['market','19_Seedling_Tray','Рассада',-14.1,-5.8,.95,.6,.4,0,'tear',false],
- ['market','20_Garden_Lantern','Фонарик',13.0,15.5,.46,.46,.85,0,'knock',false],
- ['nature','tree_oak','Дуб',-15.5,13.0,3.3,3.3,4.6,0,'',false],
- ['nature','tree_default','Дерево',15.35,12.8,3.0,3.0,4.6,.4,'',false],
- ['nature','tree_simple','Дерево',-15.0,-12.5,2.9,2.9,4.3,0,'',false],
- ['nature','tree_oak','Дуб',15.3,-12.6,3.3,3.3,4.6,.5,'',false],
- ['nature','tree_pineRoundA','Сосна',-15.5,1.0,2.6,2.6,4.4,0,'',false],
- ['nature','tree_default','Дерево',15.3,-3.0,3.1,3.1,4.5,0,'',false],
- ['nature','tree_small','Деревце',-7.1,-13.8,1.4,1.4,2.1,0,'',false],
- ['nature','tree_pineSmallC','Сосна',4.4,-14.2,1.45,1.45,2.2,0,'',false],
- ['nature','plant_bushLarge','Куст',-13.4,4.7,1.5,1.25,1.1,0,'',false],
- ['nature','plant_bush','Куст',13.8,5.1,1.3,1.15,.95,0,'',false],
- ['nature','plant_bushDetailed','Куст',-10.1,-13.5,1.15,1.05,1.1,0,'',false],
- ['nature','plant_bushSmall','Куст',12.8,-14.0,.75,.7,.65,0,'',false],
- ['nature','rock_largeA','Камень',-15.3,7.1,1.1,1.0,.7,0,'',true],
- ['nature','rock_smallA','Камень',13.6,10.1,.6,.6,.45,0,'',false],
- ['nature','flower_yellowA','Цветы',-4.3,12.1,.4,.4,.5,0,'',false],
- ['nature','flower_redB','Цветы',-5.0,12.2,.4,.4,.5,0,'',false],
- ['nature','flower_purpleA','Цветы',-5.7,12.2,.4,.4,.5,0,'',false],
- ['nature','grass_large','Трава',-13.7,7.4,.75,.6,.48,0,'',false],
- ['nature','plant_flatTall','Высокая трава',15.5,8.2,.5,.5,1.0,0,'',false],
-];
+const gardenLayout=[];
 const gardenCache=new Map();let yardLoaded=0;
 function getGardenModel(pack,name){const key=pack+'_'+name;if(!gardenCache.has(key))gardenCache.set(key,loader.loadAsync(ALL_CATALOG[pack+':'+name]||'./assets/outdoor/'+key+'.glb'));return gardenCache.get(key)}
 async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action,solid]=entry;
@@ -610,11 +520,11 @@ function editRay(event){const rect=renderer.domElement.getBoundingClientRect();r
 function selectFromPointer(event){editRay(event);const targets=[...editablePieces.values()].filter(p=>!p.removed).map(p=>p.holder);const hits=editHits.intersectObjects(targets,true);if(!hits.length){pickEdit(null);return;}let obj=hits[0].object;while(obj&&!targets.includes(obj))obj=obj.parent;const item=[...editablePieces.values()].find(p=>p.holder===obj);pickEdit(item||null)}
 const furnitureExtrasReady=()=>loadExtras();
 
-const furnitureJob=Promise.allSettled([...layout.map((d,i)=>place(d,'kenney-'+i)),...tinyMainLayout.map((d,i)=>placeTiny(d,'tinyhome-'+i)),...estateInteriorLayout.map((d,i)=>placeTiny(d,'estate-'+i)),...gardenLayout.map((d,i)=>placeGarden(d,'yard-'+i))]).then(async results=>{
+const furnitureJob=Promise.allSettled([]).then(async results=>{
  await furnitureExtrasReady();
  failed=results.filter(r=>r.status==='rejected').length;
  if(failed)console.warn('Не удалось загрузить мебель:',results.filter(r=>r.status==='rejected'));
- furnitureReady=true;stage.textContent=`🏡 Мебель в усадьбе: ${loaded} предметов · Улица: ${yardLoaded}/${gardenLayout.length}`+(failed?` · ${failed} ошибок`:' · всё на местах!');
+ furnitureReady=true;stage.textContent=`🏠 Дом готов · Твои объекты: ${customEntries.length}`+(failed?` · ${failed} ошибок`:' · всё на местах!');
  const button=document.getElementById('play');button.disabled=false;button.style.opacity='1';button.textContent='Играть! 🐾';
  // Old saves came from a different furniture layout. Use safe spawn positions on both floors.
  if(isBlocked(cat.position.x,cat.position.z,cat.position.y))cat.position.set(-1.8,0,5.2);
@@ -776,8 +686,6 @@ function drawMap(){
  c.fillStyle='#79ac70';c.fillRect(xx(-68),zz(-68),136*scale,136*scale);
  c.strokeStyle='#886d50';c.lineWidth=2;c.strokeRect(xx(-68),zz(-68),136*scale,136*scale);
  c.fillStyle='#cdb99e';for(const b of estateBuildings)c.fillRect(xx(b.x-b.w/2),zz(b.z-b.d/2),b.w*scale,b.d*scale);
- c.fillStyle='#64bde0';c.fillRect(xx(26.5),zz(3),15*scale,10*scale);
- c.fillStyle='#765a3f';for(const x of [-8,-4,0,4,8])c.fillRect(xx(x-1.5),zz(33.1),3*scale,5.8*scale);
  c.fillStyle='#f0d2b9';c.fillRect(xx(-11),zz(-9),22*scale,18*scale);
  const q=quests[questIndex];if(q){const x=xx(q.at[0]),z=zz(q.at[1]);c.strokeStyle='#fff';c.lineWidth=2;c.fillStyle='#e15b43';c.beginPath();c.arc(x,z,7,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#fff';c.font='bold 11px system-ui';c.textAlign='center';c.fillText('!',x,z+4)}
  c.save();c.translate(S/2,S/2);c.rotate(-cat.rotation.y);c.fillStyle='#222';c.beginPath();c.moveTo(0,9);c.lineTo(-7,-6);c.lineTo(7,-6);c.closePath();c.fill();c.strokeStyle='white';c.lineWidth=2;c.stroke();c.restore();
