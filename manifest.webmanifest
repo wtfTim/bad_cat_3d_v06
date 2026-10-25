@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "Bad Cat 3D — Кошачья усадьба",
+  "short_name": "Bad Cat 3D",
+  "description": "Кошачья 3D-игра с усадьбой, мебелью и свободным редактором",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any",
+  "background_color": "#a9d5e9",
+  "theme_color": "#a9d5e9",
+  "icons": [
+    {
+      "src": "./cat-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
