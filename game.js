@@ -52,7 +52,8 @@ function refreshEditBounds(piece){
  if(piece.surface){
   piece.surface.x1=bb.min.x;piece.surface.x2=bb.max.x;
   piece.surface.z1=bb.min.z;piece.surface.z2=bb.max.z;
-  piece.surface.y=piece.surface.fullTop?bb.max.y:Math.min(bb.max.y,piece.holder.position.y+piece.seatHeight);
+  piece.surface.y=piece.surface.fullTop?bb.max.y:
+   bb.min.y+(bb.max.y-bb.min.y)*(piece.seatFraction??.5);
   if(piece.removed)piece.surface.y=-999;
  }
 }
@@ -252,10 +253,33 @@ function isBlocked(x,z,feet,r=CAT_RADIUS,height=.70,sourceFilter=null){
  }
  return false;
 }
+// Supports always use the last feet height, not the already-fallen height.
+ // Seated furniture gets a geometric downward ray so its real seating surface
+ // (including scaled benches) can hold the cat even when the GLB has a tall back.
+const catSeatRay=new THREE.Raycaster();
+const catSeatDown=new THREE.Vector3(0,-1,0);
 function groundSupport(x,z,feet,prev){let best=0;
- for(const s of walkableSurfaces){if(x+CAT_RADIUS*.38<=s.x1||x-CAT_RADIUS*.38>=s.x2||z+CAT_RADIUS*.38<=s.z1||z-CAT_RADIUS*.38>=s.z2)continue;
+ for(const s of walkableSurfaces){
+  if(s.y<-100||x+CAT_RADIUS*.24<=s.x1||x-CAT_RADIUS*.24>=s.x2||z+CAT_RADIUS*.24<=s.z1||z-CAT_RADIUS*.24>=s.z2)continue;
   if(s.y<=prev+.18&&s.y>best)best=s.y;
- }return best;
+ }
+ // Use actual geometry for seats rather than an approximation based on the model's bounding box.
+ // Only test visible, nearby seating pieces; the 416-object catalog is not raycast every frame.
+ for(const p of editablePieces.values()){
+  if(!p.surface||p.surface.fullTop||p.removed||!p.holder.visible)continue;
+  const b=p.bounds;
+  if(!b||x<b.min.x-.08||x>b.max.x+.08||z<b.min.z-.08||z>b.max.z+.08)continue;
+  if(prev<b.min.y-.2||prev>b.max.y+.7)continue;
+  catSeatRay.set(new THREE.Vector3(x,prev+.16,z),catSeatDown);
+  catSeatRay.far=Math.min(1.1,Math.max(.3,prev+.16-b.min.y+.08));
+  const hits=catSeatRay.intersectObject(p.holder,true);
+  // A backrest can sit above the feet, so prefer support below the current feet
+  // and fall back to the explicit seat surface in that case.
+  const seatLimit=Math.min(b.max.y,b.min.y+(b.max.y-b.min.y)*.78);
+  const hit=hits.find(h=>h.point.y<=prev+.16&&h.point.y>=b.min.y-.02&&h.point.y<=seatLimit);
+  if(hit&&hit.point.y>best)best=hit.point.y;
+ }
+ return best;
 }
 // Manual-only rescue. Searches for nearest unobstructed position at the current level.
 function safeRecoverySpot(){
@@ -376,7 +400,12 @@ function ownerAI(dt){const d=Math.hypot(owner.position.x-cat.position.x,owner.po
    for(let i=0;i<limbs.length;i++)limbs[i].rotation.x=Math.sin(elapsed*(chase?11:6)+i*Math.PI)*.19;
   }
  }
- if(chase&&groundCat&&d<.83){score=Math.max(0,score-3);alertness=0;cat.position.set(-1.8,0,5.2);velY=0;toast('😾 Хозяин поймал! −3 🐟');sound('alert');ownerPath=[]}
+ if(chase&&groundCat&&d<.83){
+  score=Math.max(0,score-3);alertness=0;
+  // The owner may catch the cat, but never teleports the player.
+  toast('😾 Хозяин поймал! −3 🐟');sound('alert');ownerPath=[];
+  patrolPause=Math.max(patrolPause,2.5);
+ }
  if(alertness>25&&d>6)escaped=true;
 }
 // ------------------------------------------------------------------
@@ -412,7 +441,7 @@ async function placeTiny(entry,id){
   piece.collider.y2=seatY;
   piece.fullHeightCollider=!seating;
   piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:seatY,fullTop:!seating,colliderRef:piece.collider};
-  if(seating)piece.seatHeight=seatY-piece.holder.position.y;
+  if(seating){piece.seatHeight=seatY-piece.holder.position.y;piece.seatFraction=(seatY-bb.min.y)/Math.max(.001,bb.max.y-bb.min.y);}
   walkableSurfaces.push(piece.surface);
  }
  if(action)interactables.push(piece); loaded++;registerEditable(id,piece,'Tiny Living · '+piece.model);
@@ -566,7 +595,7 @@ async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
   else if(kind==='bed')seat=floor+.69;
   else if(kind==='chair')seat=floor+.48;
   else if(kind==='table')seat=bb.max.y-.06;
-  if(seat!=null){blockTop=Math.min(blockTop,seat);furniturePiece.seatHeight=blockTop-floor;furniturePiece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:blockTop};walkableSurfaces.push(furniturePiece.surface)}
+  if(seat!=null){blockTop=Math.min(blockTop,seat);furniturePiece.seatHeight=blockTop-floor;furniturePiece.seatFraction=(blockTop-bb.min.y)/Math.max(.001,bb.max.y-bb.min.y);furniturePiece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:blockTop};walkableSurfaces.push(furniturePiece.surface)}
   const box={x1:bb.min.x+.02,x2:bb.max.x-.02,z1:bb.min.z+.02,z2:bb.max.z-.02,y1:bb.min.y,y2:blockTop,source:'furniture'};
   colliders.push(box);addDebugBox(box);furniturePiece.collider=box;if(furniturePiece.surface)furniturePiece.surface.colliderRef=box;
  }
@@ -623,7 +652,7 @@ async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action
    b.y2=seatY;
    piece.fullHeightCollider=!seating;
    piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:seatY,fullTop:!seating,colliderRef:b};
-   if(seating)piece.seatHeight=seatY-piece.holder.position.y;
+   if(seating){piece.seatHeight=seatY-piece.holder.position.y;piece.seatFraction=(seatY-bb.min.y)/Math.max(.001,bb.max.y-bb.min.y);}
    walkableSurfaces.push(piece.surface);
   }
  }
@@ -1307,7 +1336,8 @@ const furnitureJob=Promise.allSettled([]).then(async results=>{
  furnitureReady=true;stage.textContent=`🏠 Дом готов · Твои объекты: ${customEntries.length}`+(failed?` · ${failed} ошибок`:' · всё на местах!');
  const button=document.getElementById('play');button.disabled=false;button.style.opacity='1';button.textContent='Играть! 🐾';
  // Old saves came from a different furniture layout. Use safe spawn positions on both floors.
- if(isBlocked(cat.position.x,cat.position.z,cat.position.y))cat.position.set(-1.8,0,5.2);
+ // A saved position near a bench is not grounds for moving the player home.
+ // Manual recovery remains available from the button.
  if(isBlocked(owner.position.x,owner.position.z,0,HUMAN_RADIUS,1.8))owner.position.set(3.4,0,5.2);
  setTimeout(()=>stage.remove(),6000);
 });
@@ -1458,7 +1488,9 @@ function updatePhysics(dt){
  // through furniture tops or the second-floor slabs.
  let level=groundSupport(cat.position.x,cat.position.z,cat.position.y,prev);
  if(stair!=null&&Math.abs(prev-stair)<.75)level=Math.max(level,stair);
- if(velY<=0&&level>-100&&cat.position.y<=level+.08&&prev>=level-.12){cat.position.y=level;velY=0;grounded=true}else grounded=false;
+ if(velY<=0&&level>-100&&cat.position.y<=level+.08&&prev>=level-.18){
+  cat.position.y=level;velY=0;grounded=true;
+ }else grounded=false;
  // The terrain is a permanent safety floor: never fall under ground or teleport home.
  if(cat.position.y<=0){cat.position.y=0;velY=0;grounded=true;}
  animateCat(dt,moving,!!keys.shift);
