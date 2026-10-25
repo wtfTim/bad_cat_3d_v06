@@ -558,8 +558,8 @@ renderer.domElement.addEventListener('wheel',e=>{if(editorOn){e.preventDefault()
 editorButton.onclick=()=>toggleEditor();document.getElementById('edToggle').onclick=()=>toggleEditor(false);
 function moveEdit(dx,dz,dy=0,rot=0){
  if(!editSelected)return;
- // Buttons use camera-relative directions: left always looks left on screen.
- const rightX=Math.cos(editCamYaw),rightZ=-Math.sin(editCamYaw);
+ // View-right vector follows actual lookAt camera orientation (not the reversed world X axis).
+ const rightX=-Math.cos(editCamYaw),rightZ=Math.sin(editCamYaw);
  const forwardX=Math.sin(editCamYaw),forwardZ=Math.cos(editCamYaw);
  moveEditedSafely(editSelected,()=>{
   const p=editSelected.holder.position;
@@ -857,7 +857,7 @@ function updatePhysicsProps(dt){for(const it of interactables){if(!it.used||it.a
 }}
 function updateVisualFx(dt){for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.time-=dt;f.vy-=8*dt;f.mesh.position.x+=f.vx*dt;f.mesh.position.y+=f.vy*dt;f.mesh.position.z+=f.vz*dt;f.mesh.scale.setScalar(Math.max(.01,f.time*2));if(f.time<=0){scene.remove(f.mesh);f.mesh.geometry.dispose();f.mesh.material.dispose();fx.splice(i,1)}}}
 function updateCamera(dt){if(editorOn){
- const speed=dt*(keys.shift?25:9),right=new THREE.Vector3(Math.cos(editCamYaw),0,-Math.sin(editCamYaw)),forward=new THREE.Vector3(Math.sin(editCamYaw),0,Math.cos(editCamYaw));
+ const speed=dt*(keys.shift?25:9),right=new THREE.Vector3(-Math.cos(editCamYaw),0,Math.sin(editCamYaw)),forward=new THREE.Vector3(Math.sin(editCamYaw),0,Math.cos(editCamYaw));
  if(keys.w||keys.arrowup)editCamTarget.addScaledVector(forward,speed);
  if(keys.s||keys.arrowdown)editCamTarget.addScaledVector(forward,-speed);
  if(keys.a||keys.arrowleft)editCamTarget.addScaledVector(right,-speed);
