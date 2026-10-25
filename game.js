@@ -36,10 +36,16 @@ function refreshEditBounds(piece){
  const bb=new THREE.Box3().setFromObject(piece.holder);piece.bounds=bb;
  if(piece.collider){const b=piece.collider;const inset=Math.min(.06,(bb.max.x-bb.min.x)*.12,(bb.max.z-bb.min.z)*.12);
   b.x1=bb.min.x+inset;b.x2=bb.max.x-inset;b.z1=bb.min.z+inset;b.z2=bb.max.z-inset;
-  b.y1=bb.min.y;b.y2=Math.min(bb.max.y,Math.max(bb.min.y+.1,piece.holder.position.y+1.8));
+  b.y1=bb.min.y;
+  b.y2=piece.fullHeightCollider?bb.max.y:Math.min(bb.max.y,Math.max(bb.min.y+.1,piece.holder.position.y+1.8));
   if(piece.removed){b.y1=999;b.y2=1000;}
  }
- if(piece.surface){piece.surface.x1=bb.min.x;piece.surface.x2=bb.max.x;piece.surface.z1=bb.min.z;piece.surface.z2=bb.max.z;piece.surface.y=Math.min(bb.max.y,piece.holder.position.y+piece.seatHeight);}
+ if(piece.surface){
+  piece.surface.x1=bb.min.x;piece.surface.x2=bb.max.x;
+  piece.surface.z1=bb.min.z;piece.surface.z2=bb.max.z;
+  piece.surface.y=piece.surface.fullTop?bb.max.y:Math.min(bb.max.y,piece.holder.position.y+piece.seatHeight);
+  if(piece.removed)piece.surface.y=-999;
+ }
 }
 // Editor collision guard: test the entire rotated model's world-space AABB
 // against actual architectural wall colliders. A failed move restores its old pose.
@@ -235,6 +241,23 @@ function groundSupport(x,z,feet,prev){let best=-999;
   if(s.y<=prev+.31&&s.y>best)best=s.y;
  }return best;
 }
+// Find a nearby free escape position for a character trapped by a newly added object.
+function findSafeCatPosition(){
+ const x=cat.position.x,z=cat.position.z,y=cat.position.y;
+ if(!isBlocked(x,z,y))return null;
+ // Prefer a position outside the obstruction on the same floor; never teleport blindly.
+ for(let radius=.35;radius<=3.6;radius+=.3){
+  for(let i=0;i<24;i++){
+   const angle=(i/24)*Math.PI*2,cx=x+Math.cos(angle)*radius,cz=z+Math.sin(angle)*radius;
+   if(!isBlocked(cx,cz,y,CAT_RADIUS+.02,.7)){
+    const level=groundSupport(cx,cz,y,y);
+    if(level>-100&&Math.abs(level-y)<.55)return [cx,cz,level];
+    if(y<.55)return [cx,cz,0];
+   }
+  }
+ }
+ return null;
+}
 function stairLevel(x,z){return x>6.74&&x<9.47&&z>.98&&z<8.12?THREE.MathUtils.clamp((8.05-z)/(stepDepth*stairSteps)*F,0,F):null}
 
 // ------------------------------------------------------------------
@@ -352,6 +375,11 @@ async function placeTiny(entry,id){
  const bb=new THREE.Box3().setFromObject(holder);
  const piece={model:name.replace(/^TinyLiving_|^TinytLiving_/,'').replace(/_[0-9]+$/,''),holder,kind:'tiny',action,level:floor,floorY:floor,bounds:bb,height:bb.max.y-bb.min.y,used:false,vy:0,vx:0,vz:0,collider:null};
  if(solid){const inset=Math.min(.08,(bb.max.x-bb.min.x)*.12,(bb.max.z-bb.min.z)*.12); const b={x1:bb.min.x+inset,x2:bb.max.x-inset,z1:bb.min.z+inset,z2:bb.max.z-inset,y1:Math.max(floor,bb.min.y),y2:Math.min(bb.max.y,floor+1.8),source:'tiny'}; if(b.x1<b.x2&&b.z1<b.z2){colliders.push(b); addDebugBox(b); piece.collider=b;}}
+ if(piece.collider&&!/art|painting|wall|mirror|rug|carpet/i.test(name)){
+  piece.fullHeightCollider=true;piece.collider.y2=bb.max.y;
+  piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:bb.max.y,fullTop:true};
+  walkableSurfaces.push(piece.surface);
+ }
  if(action)interactables.push(piece); loaded++;registerEditable(id,piece,'Tiny Living · '+piece.model);
  return piece;
 }
@@ -507,6 +535,15 @@ async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
   const box={x1:bb.min.x+.02,x2:bb.max.x-.02,z1:bb.min.z+.02,z2:bb.max.z-.02,y1:bb.min.y,y2:blockTop,source:'furniture'};
   colliders.push(box);addDebugBox(box);furniturePiece.collider=box;
  }
+ // Full-height model collision plus top support for furniture not already marked as a seat/table.
+ if(furniturePiece.collider&&kind!=='decor'&&kind!=='rug'){
+  furniturePiece.fullHeightCollider=true;
+  furniturePiece.collider.y2=bb.max.y;
+  if(!furniturePiece.surface){
+   furniturePiece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:bb.max.y,fullTop:true};
+   walkableSurfaces.push(furniturePiece.surface);
+  }
+ }
  if(action)interactables.push(furniturePiece);
  loaded++;registerEditable(id,furniturePiece,'Kenney · '+model);
  return furniturePiece;
@@ -528,9 +565,27 @@ async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action
  const holder=new THREE.Group();holder.position.set(x,0,z);holder.rotation.y=yaw;holder.add(aligned);house.add(holder);holder.updateMatrixWorld(true);
  const bb=new THREE.Box3().setFromObject(holder);
  const piece={model:label,holder,kind:'yard',action,level:0,floorY:0,bounds:bb,height:bb.max.y-bb.min.y,used:false,vy:0,vx:0,vz:0,collider:null};
- if(solid){const inset=Math.min(.09,(bb.max.x-bb.min.x)*.1,(bb.max.z-bb.min.z)*.1);const b={x1:bb.min.x+inset,x2:bb.max.x-inset,z1:bb.min.z+inset,z2:bb.max.z-inset,y1:Math.max(0,bb.min.y),y2:Math.min(bb.max.y,1.4),source:'garden'};if(b.x1<b.x2&&b.z1<b.z2){colliders.push(b);addDebugBox(b);piece.collider=b;}}
- // Nature trees only obstruct close to their trunks, not the entire canopy.
- if(pack==='nature'&&name.startsWith('tree_')){const r=.28;const b={x1:x-r,x2:x+r,z1:z-r,z2:z+r,y1:0,y2:1.8,source:'tree'};colliders.push(b);addDebugBox(b)}
+ // Solid imported objects block the cat at their real full height. Flat decoration,
+ // roads, flowers and grass are non-solid. Trees block only at the trunk (not the canopy).
+ const keyName=(pack+':'+name).toLowerCase();
+ const tree=/tree|birch|pine|palm/.test(keyName);
+ const groundDecor=/road|path|paving|tile|grass|flower|mushroom|fern|seedling|carpet|rug|decal/.test(keyName);
+ const flat=bb.max.y-bb.min.y<.09;
+ const physical=!groundDecor&&!flat&&!/sign|poster|painting|wall_art/.test(keyName);
+ if(tree){
+  const r=Math.max(.25,Math.min(.58,(bb.max.x-bb.min.x)*.12));
+  const b={x1:x-r,x2:x+r,z1:z-r,z2:z+r,y1:bb.min.y,y2:Math.min(bb.max.y,2.2),source:'tree'};
+  colliders.push(b);addDebugBox(b);piece.collider=b;
+ }else if(physical){
+  const inset=Math.min(.035,(bb.max.x-bb.min.x)*.035,(bb.max.z-bb.min.z)*.035);
+  const b={x1:bb.min.x+inset,x2:bb.max.x-inset,z1:bb.min.z+inset,z2:bb.max.z-inset,y1:bb.min.y,y2:bb.max.y,source:'garden'};
+  if(b.x1<b.x2&&b.z1<b.z2){
+   colliders.push(b);addDebugBox(b);piece.collider=b;piece.fullHeightCollider=true;
+   // When jumping onto a physical object, the top supports the cat.
+   piece.surface={x1:bb.min.x,x2:bb.max.x,z1:bb.min.z,z2:bb.max.z,y:bb.max.y,fullTop:true};
+   walkableSurfaces.push(piece.surface);
+  }
+ }
  if(action)interactables.push(piece);yardLoaded++;registerEditable(id,piece,'Сад · '+label);
  return piece;
 }
@@ -1343,6 +1398,11 @@ document.getElementById('reset').onclick=()=>{localStorage.removeItem('badcat3d-
 const fps=document.createElement('div');fps.style.cssText='position:fixed;right:12px;bottom:8px;z-index:4;background:#263344c4;color:#fff;padding:5px 10px;border-radius:9px;font:700 12px system-ui;pointer-events:none';fps.textContent='⚡ FPS';document.body.append(fps);
 let fpsFrames=0,fpsSum=0;const clock=new THREE.Clock(),ray=new THREE.Raycaster();
 function updatePhysics(dt){
+ // Editor can move props onto the player: safely eject the cat before processing motion.
+ if(isBlocked(cat.position.x,cat.position.z,cat.position.y)){
+  const escape=findSafeCatPosition();
+  if(escape){cat.position.set(...escape);velY=0;grounded=true;}
+ }
  const dx=stick.x+Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft));
  const dz=stick.y+Number(!!(keys.w||keys.arrowup))-Number(!!(keys.s||keys.arrowdown));
  let moving=Math.hypot(dx,dz)>.12;
