@@ -833,22 +833,20 @@ let editorOn=false,editSelected=null,editHelper=null,editPointer=null,editPlane=
 const WALL_SAVE_KEY='badcat3d-walls-v1';
 const wallEdits=new Map(),wallRecords=new Map();
 let wallMode=false,selectedWall=null,wallHelper=null;
-// User-approved garage wall layout is built in for every fresh browser/device.
-// Local edits always override these defaults; they are never replaced at startup.
-const BUILTIN_GARAGE_WALLS={
- 'original-484':{x:39.92570846636728,z:-27.47517190305986,y:0,length:5.1,height:3.4,thickness:.22,rotation:Math.PI,opening:'none',openingWidth:1.2,openingHeight:2.2,sill:1},
- 'original-483':{x:31.544134055398604,z:-27.431654269313857,y:0,length:4.3,height:3.4,thickness:.22,rotation:0,opening:'none',openingWidth:1.2,openingHeight:2.2,sill:1}
-};
-let wallStored={...BUILTIN_GARAGE_WALLS};
+// Latest owner-approved complete wall layout, including garage and interior changes.
+// Kept as code because walls must exist synchronously before gameplay and collision tests.
+// Canonical source: layouts/builtin_estate_walls_v2.json.
+const BUILTIN_WALLS_V2={"original-484":{"x":39.92570846636728,"z":-27.47517190305986,"y":1.3877787807814457e-17,"length":5.1,"height":3.4,"thickness":0.22,"rotation":3.141592653589793,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"original-483":{"x":31.544134055398604,"z":-27.431654269313857,"y":0,"length":4.3,"height":3.4,"thickness":0.22,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"built-mvnp0gb3-4112":{"x":-3.025921117606045,"z":-4.643000771498386,"y":3.55,"length":3,"height":3.5,"thickness":0.2,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1,"deleted":false},"original-40":{"x":-6.6,"z":0,"y":0,"length":8.8,"height":3.55,"thickness":0.18,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"original-79":{"x":0,"z":-5.2,"y":3.5499999999999994,"length":7.6,"height":3.55,"thickness":0.18,"rotation":1.5707963267948966,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"original-8":{"x":9.65,"z":-9,"y":0,"length":2.6999999999999993,"height":3.55,"thickness":0.24,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"built-mvnp29hu-7455":{"x":-4.433270087458388,"z":-6.7174105858025985,"y":3.55,"length":4.35,"height":3.5,"thickness":0.2,"rotation":1.5707963267948966,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1,"deleted":false},"original-20":{"x":-11,"z":-7.5,"y":0,"length":3,"height":3.55,"thickness":0.2,"rotation":1.5707963267948966,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1,"deleted":false},"original-38":{"x":0,"z":-5.2,"y":0,"length":7.6,"height":3.55,"thickness":0.18,"rotation":1.5707963267948966,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"original-23":{"x":-11.135,"z":-5,"y":1.05,"length":1.9,"height":1.23,"thickness":0.06,"rotation":1.5707963267948966,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"built-mvnp5qyj-2041":{"x":-8.640042277013734,"z":-6.5471742888127595,"y":3.55,"length":4.9,"height":3.5,"thickness":0.2,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1,"deleted":false},"built-mvnp6v4z-5536":{"x":-5.470438418188403,"z":-6.558485957649515,"y":5.849999999999992,"length":2,"height":1.2,"thickness":0.2,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1,"deleted":false},"original-47":{"x":0.1499999999999999,"z":-9,"y":3.5499999999999994,"length":12.3,"height":3.55,"thickness":0.24,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"built-mvnp8pro-3793":{"x":-0.9734635906398591,"z":-4.638136132243,"y":5.849999999999992,"length":2,"height":1.2,"thickness":0.2,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1,"deleted":false},"original-29":{"x":11,"z":-7.5,"y":0,"length":3,"height":3.55,"thickness":0.24,"rotation":1.5707963267948966,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1},"original-51":{"x":9.65,"z":-9,"y":3.5499999999999994,"length":2.6999999999999993,"height":3.55,"thickness":0.24,"rotation":0,"opening":"none","openingWidth":1.2,"openingHeight":2.2,"sill":1}};
+let wallStored={...BUILTIN_WALLS_V2};
 try{
  const local=JSON.parse(localStorage.getItem(WALL_SAVE_KEY)||'{}')||{};
  if(local&&typeof local==='object'&&!Array.isArray(local))wallStored={...wallStored,...local};
-}catch(e){console.warn('Could not read saved walls; built-in garage layout will be used',e)}
+}catch(e){console.warn('Could not read saved walls; built-in estate layout will be used',e)}
 const wallMat=material('#efe1c8');
 const wallField=(id)=>document.getElementById('edWall'+id);
 function saveEditedWalls(){
  // Keep unchanged built-in garage walls included in export and subsequent edits.
- const changes={...BUILTIN_GARAGE_WALLS};for(const [id,record] of wallEdits)changes[id]=record;
+ const changes={...BUILTIN_WALLS_V2};for(const [id,record] of wallEdits)changes[id]=record;
  const old=localStorage.getItem(WALL_SAVE_KEY);
  if(old)localStorage.setItem(WALL_SAVE_KEY+'-last-backup',old);
  localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(changes));
@@ -1299,7 +1297,7 @@ async function applyStarter({automatic=false}={}){
 document.getElementById('edStarter').onclick=()=>applyStarter();
 // This is the player's complete approved estate layout committed with the project.
 // Model files themselves remain in their respective asset packs.
-const BUILTIN_LAYOUT_KEY='badcat3d-builtin-layout-2026-10-25-v1';
+const BUILTIN_LAYOUT_KEY='badcat3d-builtin-layout-2026-10-25-v2';
 async function loadCommittedFurniture(){
  const paths=Array.from({length:6},(_,i)=>'./layouts/builtin_furniture_part_'+(i+1)+'.json');
  const responses=await Promise.all(paths.map(path=>fetch(path,{cache:'no-store'})));
@@ -1322,20 +1320,36 @@ async function initializeCommittedFurniture(){
  const builtin=await loadCommittedFurniture();
  const existingLayout=localStorage.getItem(EDIT_SAVE_KEY);
  const existingExtras=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
- // Import the committed layout once, then let the editor retain later local changes.
- // First import saves the older setup separately, never silently destroys it.
- if(localStorage.getItem(BUILTIN_LAYOUT_KEY)!=='1'||!existingLayout||!existingExtras){
-  if(existingLayout&&localStorage.getItem(BUILTIN_LAYOUT_KEY)!=='1')localStorage.setItem(EDIT_SAVE_KEY+'-before-builtin',existingLayout);
-  if(existingExtras&&localStorage.getItem(BUILTIN_LAYOUT_KEY)!=='1')localStorage.setItem(EDIT_SAVE_KEY+'-extras-before-builtin',existingExtras);
-  localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(builtin.layout));
-  localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(builtin.custom));
-  localStorage.setItem(BUILTIN_LAYOUT_KEY,'1');
-  storedLayout=builtin.layout;
-  console.info('Bad Cat 3D: restored permanent project furniture layout ('+builtin.custom.length+' objects)');
- }else{
-  // Existing positions are user edits to the committed layout and win.
-  storedLayout=JSON.parse(existingLayout);
+ if(localStorage.getItem(BUILTIN_LAYOUT_KEY)==='1'&&existingLayout&&existingExtras){
+  storedLayout=JSON.parse(existingLayout);return;
  }
+ // Preserve previous browser layout and model list before the one-time v2 upgrade.
+ if(existingLayout)localStorage.setItem(EDIT_SAVE_KEY+'-before-builtin-v2',existingLayout);
+ if(existingExtras)localStorage.setItem(EDIT_SAVE_KEY+'-extras-before-builtin-v2',existingExtras);
+ let nextLayout={...builtin.layout},nextCustom=builtin.custom.slice();
+ if(existingLayout&&existingExtras){
+  const local=JSON.parse(existingLayout),extras=JSON.parse(existingExtras);
+  // Respect individually edited positions. Upgrade the unchanged old default
+  // electric stove to its corrected v2 position (the sole furniture difference).
+  const originalStove=local['custom-106'];
+  if(originalStove&&Array.isArray(originalStove.pos)){
+   const previous=[-9.850100822933001,0,-8.162290450140407];
+   const untouched=originalStove.pos.every((v,i)=>Math.abs(v-previous[i])<.00001)&&
+      Math.abs((originalStove.rot||0))<.00001&&originalStove.scale===1&&!originalStove.hidden;
+   if(untouched)local['custom-106']=builtin.layout['custom-106'];
+  }
+  nextLayout={...nextLayout,...local};
+  if(Array.isArray(extras)){
+   const byId=new Map(nextCustom.map(e=>[e.id,e]));
+   for(const item of extras)if(item&&typeof item.id==='string'&&typeof item.name==='string')byId.set(item.id,item);
+   nextCustom=[...byId.values()];
+  }
+ }
+ localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(nextLayout));
+ localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(nextCustom));
+ localStorage.setItem(BUILTIN_LAYOUT_KEY,'1');
+ storedLayout=nextLayout;
+ console.info('Bad Cat 3D: updated permanent estate v2 ('+builtin.custom.length+' objects; 16 walls)');
 }
 const missingFurnitureModels=[];
 async function loadExtras(){
