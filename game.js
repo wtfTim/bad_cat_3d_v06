@@ -476,6 +476,7 @@ async function place(d,id){const [model,x,z,floor,w,dpt,h,yaw,kind,action]=d;
  }
  if(action)interactables.push(furniturePiece);
  loaded++;registerEditable(id,furniturePiece,'Kenney · '+model);
+ return furniturePiece;
 }
 // Imported garden: models are deliberately positioned beyond the house footprint.
 // tuple: pack, file, display name, x, z, max width, max depth, max height, angle, action, solid
@@ -495,6 +496,7 @@ async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action
  // Nature trees only obstruct close to their trunks, not the entire canopy.
  if(pack==='nature'&&name.startsWith('tree_')){const r=.28;const b={x1:x-r,x2:x+r,z1:z-r,z2:z+r,y1:0,y2:1.8,source:'tree'};colliders.push(b);addDebugBox(b)}
  if(action)interactables.push(piece);yardLoaded++;registerEditable(id,piece,'Сад · '+label);
+ return piece;
 }
 
 // In-browser layout editor: choose furniture, drag on the floor plane, rotate and save.
