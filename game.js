@@ -388,9 +388,42 @@ function estateBuilding(b){
  addBox(w,.22,d,material('#cab99a'),x,-.13,z,{top:true});
  addBox(w,H,.22,m,x,H/2,z-d/2,{wall:true});
  for(const side of [-1,1])addBox(.22,H,d,m,x+side*w/2,H/2,z,{wall:true});
- for(const side of [-1,1])addBox((w-3.4)/2,H,.22,m,x+side*(w+3.4)/4,H/2,z+d/2,{wall:true});
- addBox(3.4,.52,.22,m,x,H-.26,z+d/2,{wall:true});
- for(const side of [-1,1]){addBox(1.5,1.2,.05,windowMat,x+side*w*.33,1.8,z+d/2+.14);addBox(.13,2.6,.17,trimMat,x+side*1.75,1.3,z+d/2+.15)}
+ if(b.name==='Гараж'){
+  // Two real openings in the front (+Z) facade: vehicle gate and pedestrian door.
+  // Wall segments are built around the openings, so collision geometry leaves both paths free.
+  const front=z+d/2,frontLeft=x-w/2,frontRight=x+w/2;
+  const vehicleLeft=x-5.6,vehicleRight=x+.6,vehicleTop=2.85;
+  const personLeft=x+4.45,personRight=x+5.9,personTop=2.45;
+  function frontSegment(left,right,height=H,bottom=0){
+   if(right<=left)return;
+   addBox(right-left,height-bottom,.22,m,(left+right)/2,(height+bottom)/2,front,{wall:true});
+  }
+  frontSegment(frontLeft,vehicleLeft);
+  frontSegment(vehicleRight,personLeft);
+  frontSegment(personRight,frontRight);
+  frontSegment(vehicleLeft,vehicleRight,H,vehicleTop);
+  frontSegment(personLeft,personRight,H,personTop);
+  // Raised sectional garage gate above the vehicle opening (the entrance remains open).
+  const gateMat=material('#67798b'),gateEdge=material('#e2e8ed');
+  for(let row=0;row<3;row++){
+   const yy=vehicleTop+.08+row*.13;
+   const panel=addBox(vehicleRight-vehicleLeft-.14,.105,.075,gateMat,(vehicleLeft+vehicleRight)/2,yy,front+.17);
+   addBox(vehicleRight-vehicleLeft-.14,.018,.09,gateEdge,(vehicleLeft+vehicleRight)/2,yy+.054,front+.18);
+  }
+  for(const xx of [vehicleLeft,vehicleRight]){
+   addBox(.13,vehicleTop,.26,trimMat,xx,vehicleTop/2,front+.09);
+  }
+  // Small pedestrian door is drawn opened sideways, without covering its walkable opening.
+  for(const xx of [personLeft,personRight])addBox(.085,personTop,.20,trimMat,xx,personTop/2,front+.12);
+  addBox(personRight-personLeft+.14,.12,.20,trimMat,(personLeft+personRight)/2,personTop+.05,front+.12);
+  const doorPanel=addBox(.075,2.2,1.20,material('#8e5b43'),personLeft-.19,1.1,front+1.0);
+  addBox(.10,.085,.12,material('#e7c263'),personLeft-.10,1.03,front+1.47);
+  // No solid door or gate colliders: both entrances can be walked through.
+ }else{
+  for(const side of [-1,1])addBox((w-3.4)/2,H,.22,m,x+side*(w+3.4)/4,H/2,z+d/2,{wall:true});
+  addBox(3.4,.52,.22,m,x,H-.26,z+d/2,{wall:true});
+  for(const side of [-1,1]){addBox(1.5,1.2,.05,windowMat,x+side*w*.33,1.8,z+d/2+.14);addBox(.13,2.6,.17,trimMat,x+side*1.75,1.3,z+d/2+.15)}
+ }
  for(const side of [-1,1]){const slab=addBox(w+1,.18,d/2+.8,roof,x,H+.45,z+side*d/4);slab.rotation.x=side*.14;roofPieces.push({mesh:slab,x,z})}
 
 }
