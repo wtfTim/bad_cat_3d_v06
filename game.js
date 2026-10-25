@@ -34,11 +34,20 @@ function registerEditable(id,piece,description){
 function refreshEditBounds(piece){
  piece.holder.updateMatrixWorld(true);
  const bb=new THREE.Box3().setFromObject(piece.holder);piece.bounds=bb;
- if(piece.collider){const b=piece.collider;const inset=Math.min(.06,(bb.max.x-bb.min.x)*.12,(bb.max.z-bb.min.z)*.12);
+ if(piece.collider){
+  const b=piece.collider;
+  if(piece.trunkCollider){
+   const x=piece.holder.position.x,z=piece.holder.position.z;
+   const r=piece.trunkRadius*piece.holder.scale.x;
+   b.x1=x-r;b.x2=x+r;b.z1=z-r;b.z2=z+r;
+   b.y1=bb.min.y;b.y2=Math.min(bb.max.y,bb.min.y+2.2*piece.holder.scale.y);
+  }else{
+  const inset=Math.min(.06,(bb.max.x-bb.min.x)*.12,(bb.max.z-bb.min.z)*.12);
   b.x1=bb.min.x+inset;b.x2=bb.max.x-inset;b.z1=bb.min.z+inset;b.z2=bb.max.z-inset;
   b.y1=bb.min.y;
   b.y2=piece.fullHeightCollider?bb.max.y:Math.min(bb.max.y,Math.max(bb.min.y+.1,piece.holder.position.y+1.8));
   if(piece.removed){b.y1=999;b.y2=1000;}
+  }
  }
  if(piece.surface){
   piece.surface.x1=bb.min.x;piece.surface.x2=bb.max.x;
@@ -575,7 +584,7 @@ async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action
  if(tree){
   const r=Math.max(.25,Math.min(.58,(bb.max.x-bb.min.x)*.12));
   const b={x1:x-r,x2:x+r,z1:z-r,z2:z+r,y1:bb.min.y,y2:Math.min(bb.max.y,2.2),source:'tree'};
-  colliders.push(b);addDebugBox(b);piece.collider=b;
+  colliders.push(b);addDebugBox(b);piece.collider=b;piece.trunkCollider=true;piece.trunkRadius=r;
  }else if(physical){
   const inset=Math.min(.035,(bb.max.x-bb.min.x)*.035,(bb.max.z-bb.min.z)*.035);
   const b={x1:bb.min.x+inset,x2:bb.max.x-inset,z1:bb.min.z+inset,z2:bb.max.z-inset,y1:bb.min.y,y2:bb.max.y,source:'garden'};
