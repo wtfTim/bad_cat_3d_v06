@@ -96,7 +96,7 @@ addBox(.11,1.05,7.05,mats.white,6.68,2,4.45);
 // Outdoor v1.4: coherent small plot, clear south entrance and a real playable yard.
 const grass=material('#87b768'),grassDeep=material('#548f58'),pathMat=material('#d9c2a1'),fenceMat=material('#b98b5c'),soilMat=material('#74513f'),leafMat=material('#4c9b62'),flowerMat=material('#f7a7b9'),potMat=material('#be7959'),playMat=material('#edb54b');
 // Walkable terrain surrounds the house and includes the side and back gardens.
-addBox(36,.12,34,grass,0,-.19,1,{top:true});
+addBox(140,.12,140,grass,0,-.19,0,{top:true});
 function outdoorsBox(w,h,d,mat,x,y,z,{solid=false,top=false}={}){return addBox(w,h,d,mat,x,y,z,{wall:solid,top})}
 // Front porch and entrance: centered at x=2.7, z=9, unobstructed corridor through to lawn.
 outdoorsBox(2.9,.035,8.6,pathMat,2.7,-.005,13.4);
@@ -108,9 +108,7 @@ outdoorsBox(27,.02,1.4,pathMat,0,-.01,-12.6);
 // Perimeter fence; front gate at x=2.7. All sections have matching actual colliders.
 function fenceX(a,b,z){for(let x=a+.42;x<b;x+=1.4){outdoorsBox(.18,1.35,.2,fenceMat,x,.68,z,{solid:true});}outdoorsBox(b-a,.14,.16,fenceMat,(a+b)/2,.94,z,{solid:true});outdoorsBox(b-a,.14,.16,fenceMat,(a+b)/2,.33,z,{solid:true})}
 function fenceZ(a,b,x){for(let z=a+.42;z<b;z+=1.4)outdoorsBox(.2,1.35,.18,fenceMat,x,.68,z,{solid:true});outdoorsBox(.16,.14,b-a,fenceMat,x,.94,(a+b)/2,{solid:true});outdoorsBox(.16,.14,b-a,fenceMat,x,.33,(a+b)/2,{solid:true})}
-fenceX(-18,1.4,18);fenceX(4.0,18,18);fenceX(-18,18,-16);fenceZ(-16,18,-18);fenceZ(-16,18,18);
-// Keep the entrance to the street visually marked, but the small yard stays bounded.
-outdoorsBox(.15,1.2,.55,fenceMat,1.4,.6,18,{solid:true});outdoorsBox(.15,1.2,.55,fenceMat,4,.6,18,{solid:true});
+fenceX(-68,68,-68);fenceX(-68,68,68);fenceZ(-68,68,-68);fenceZ(-68,68,68);
 // Real imported outdoor objects replace the previous placeholder trees and yard props.
 // Every outdoor object's collision box is derived from its loaded GLB geometry.
 const yardInteractions=[];
@@ -327,22 +325,17 @@ function addDebugBox(b){const w=b.x2-b.x1,d=b.z2-b.z1,h=b.y2-b.y1;if(h<=0)return
 }
 for(const c of colliders)addDebugBox(c);
 
-// ─── OPEN NEIGHBORHOOD ─────────────────────────────────────────────
-// Sixteen explorable, furnished bungalow shells in four blocks, with roads,
-// alleys, gardens, parks and a market. The original house stays intact.
+// ─── PRIVATE ESTATE: NEIGHBORHOOD REPLACED ──────────────────────
 const oldDistrictColliderCount=colliders.length;
-const districtRoad=material('#555f68'),laneLine=material('#f6e8b8'),districtGrass=material('#80b968');
-const houseTones=['#e8c9ae','#d1dfec','#f0d6d9','#e7d9b3','#c6e0cf','#e2d3ef'];
-const trimMat=material('#fff3df'),windowMat=new THREE.MeshStandardMaterial({color:'#98c8df',metalness:.2,roughness:.2});
-const homeCenters=[];
-addBox(214,.18,214,districtGrass,0,-.15,0,{top:true});
-// Roads start outside the original garden. Width leaves a walkable pavement.
-for(const x of [-59,-21,21,59]){outdoorsBox(7,.028,214,districtRoad,x,-.047,0);
- for(let z=-100;z<103;z+=10)outdoorsBox(.13,.031,4.0,laneLine,x,-.025,z);}
-for(const z of [-59,-21,21,59]){outdoorsBox(214,.028,7,districtRoad,0,-.046,z);
- for(let x=-100;x<103;x+=10)outdoorsBox(4,.031,.12,laneLine,x,-.024,z);}
-// Exit and inviting walkway from front gate across the first road.
-outdoorsBox(2.1,.032,5,pathMat,2.7,-.008,20.5);
+const trimMat=material('#fff3df');
+const windowMat=new THREE.MeshStandardMaterial({color:'#9ad0e4',roughness:.16,transparent:true,opacity:.6});
+const homeCenters=[],tinyNeighborhoodLayout=[];
+const estateBuildings=[
+ {name:'Гараж',x:38,z:-34,w:17,d:13,c:'#cdd5dd'},
+ {name:'Сарай',x:-42,z:-31,w:12,d:11,c:'#c49c78'},
+ {name:'Баня',x:40,z:35,w:14,d:12,c:'#d0b18b'},
+ {name:'Теплица',x:-40,z:36,w:16,d:12,c:'#b2d4c4'}
+];
 function streetCollider(x,z,w,d,h){const b={x1:x-w/2,x2:x+w/2,z1:z-d/2,z2:z+d/2,y1:0,y2:h,source:'street'};colliders.push(b);addDebugBox(b);return b}
 function streetThing(label,x,z,action,opts={}){
  const holder=new THREE.Group();holder.position.set(x,0,z);house.add(holder);
@@ -362,70 +355,42 @@ function streetThing(label,x,z,action,opts={}){
  if(opts.solid)piece.collider=streetCollider(x,z,opts.shape==='bench'?1.9:.58,opts.shape==='bench'?.54:.58,opts.shape==='bench'?.62:.7);
  interactables.push(piece);streetObjects.push(piece);return piece;
 }
-function housePrefab(x,z,id){
- const tint=material(houseTones[id%houseTones.length]),roof=material(id%2?'#9b6268':'#887581'),floor=material('#d7b78b');
- const W=14,D=13,H=3.2,side=W/2,deep=D/2;
- homeCenters.push([x,z]);
- addBox(W,.23,D,floor,x,-.13,z,{top:true});
- // Three exterior walls and a fourth with an actual 2.7m doorway.
- addBox(W,H,.23,tint,x,H/2,z-deep,{wall:true});
- addBox(.23,H,D,tint,x-side,H/2,z,{wall:true});
- addBox(.23,H,D,tint,x+side,H/2,z,{wall:true});
- addBox((W-2.8)/2,H,.23,tint,x-(W+2.8)/4,H/2,z+deep,{wall:true});
- addBox((W-2.8)/2,H,.23,tint,x+(W+2.8)/4,H/2,z+deep,{wall:true});
- addBox(2.8,.55,.23,tint,x,H-.275,z+deep,{wall:true});
- // Windows, glazed door and bright trims.
- addBox(1.7,1.2,.025,windowMat,x-4,1.75,z+deep+.14);
- addBox(1.7,1.2,.025,windowMat,x+4,1.75,z+deep+.14);
- addBox(1.25,1.1,.025,windowMat,x-5.9,1.7,z-deep-.14);
- addBox(1.25,1.1,.025,windowMat,x+5.9,1.7,z-deep-.14);
- addBox(.18,2.55,.20,trimMat,x-1.49,1.27,z+deep+.15);
- addBox(.18,2.55,.20,trimMat,x+1.49,1.27,z+deep+.15);
- addBox(2.7,.10,.18,trimMat,x,2.48,z+deep+.15);
- for(const dx of [-.67,.67]){addBox(1.22,2.05,.05,windowMat,x+dx,1.42,z+deep+.12);}
- // Raised roof made from two sloping slabs, visible but roofs fade near player.
- for(const sign of [-1,1]){const slab=addBox(W+1,.19,D/2+1,roof,x,H+.6,z+sign*3.2);slab.rotation.x=sign*.17;roofPieces.push({mesh:slab,x,z})}
- // Tiny Living furniture is injected later for every neighbour home.
- // Garden behind house, lamp post and flowerpot at a side of the doorway.
- streetThing('Цветочный горшок соседа',x+5.5,z+8.0,'knock',{shape:'plant',solid:true});
- if(id%3===0)streetThing('Коробка у крыльца',x-4.5,z+8.3,'knock',{solid:true,color:'#c5a078'});
- if(id%4===0)streetThing('Соседская лавка',x+9,z,'scratch',{shape:'bench',solid:true});
- // Side tree canopy is light and trunk physically solid.
- const trunk=material('#956745'),leaves=material(id%3===0?'#5caa6d':'#74b86a');
- const tx=x-9,tz=z-8;
- column(.28,.33,2.7,trunk,tx,1.35,tz,house);
- ball(1.95,leaves,tx,3.3,tz,house,1.1,.92,1.0);streetCollider(tx,tz,.65,.65,2.35);
- if(id%2===0){ball(1.20,leaves,x+9,1.1,z+9,house,1,.8,1);streetCollider(x+9,z+9,1.1,1.1,1.6);}
+
+function estateBuilding(b){
+ const {x,z,w,d}=b,H=3.4,m=material(b.c),roof=material('#806658');
+ addBox(w,.22,d,material('#cab99a'),x,-.13,z,{top:true});
+ addBox(w,H,.22,m,x,H/2,z-d/2,{wall:true});
+ for(const side of [-1,1])addBox(.22,H,d,m,x+side*w/2,H/2,z,{wall:true});
+ for(const side of [-1,1])addBox((w-3.4)/2,H,.22,m,x+side*(w+3.4)/4,H/2,z+d/2,{wall:true});
+ addBox(3.4,.52,.22,m,x,H-.26,z+d/2,{wall:true});
+ for(const side of [-1,1]){addBox(1.5,1.2,.05,windowMat,x+side*w*.33,1.8,z+d/2+.14);addBox(.13,2.6,.17,trimMat,x+side*1.75,1.3,z+d/2+.15)}
+ for(const side of [-1,1]){const slab=addBox(w+1,.18,d/2+.8,roof,x,H+.45,z+side*d/4);slab.rotation.x=side*.14;roofPieces.push({mesh:slab,x,z})}
+ addBox(1.7,.85,.8,material('#aa815d'),x-w/2+1.4,.42,z-1.4,{top:true});streetCollider(x-w/2+1.4,z-1.4,1.7,.8,.85);
 }
-let houseId=0;for(const x of [-78,-40,40,78])for(const z of [-78,-40,40,78])housePrefab(x,z,houseId++);
-const tinyNeighborhoodLayout=homeCenters.flatMap(([x,z],i)=>neighborTinyLayoutFor(x,z,i));
-// Civic places; each is a real landmark on the minimap.
-streetThing('Парковая лавка',3,-45,'scratch',{shape:'bench',solid:true});
-for(const [x,z] of [[-6,-47],[6,-47],[-5,-35],[6,-34],[12,39],[-10,44],[8,82]])streetThing('Горшок с цветами',x,z,'knock',{shape:'plant',solid:true});
-for(const [x,z] of [[-9,-34],[9,-39],[-9,76],[9,76],[-6,42],[8,43]]){
- column(.24,.30,2.7,material('#86603c'),x,1.35,z,house);ball(1.85,material('#56a45c'),x,3.35,z,house);streetCollider(x,z,.6,.6,2.2);
+for(const b of estateBuildings)estateBuilding(b);
+const paving=material('#ccba9e'),poolWater=new THREE.MeshStandardMaterial({color:'#59bde1',roughness:.15,transparent:true,opacity:.82});
+for(const [x,z,w,d] of [[20,-32,26,3],[-23,-31,24,2.4],[23,35,25,2.6],[-24,36,22,2.6],[0,25,3,34],[23,0,3,63]])outdoorsBox(w,.03,d,paving,x,-.01,z);
+outdoorsBox(19,.18,14,material('#ddd4c5'),34,.06,8);
+outdoorsBox(15,.04,10,poolWater,34,.17,8);
+for(const [x,z] of [[23,1],[23,15],[45,1],[45,15]])streetThing('Шезлонг',x,z,'scratch',{shape:'bench',solid:true});
+for(const x of [-8,-4,0,4,8]){
+ outdoorsBox(3.1,.12,5.8,soilMat,x,-.015,36);
+ for(let z=34;z<=38;z+=2)ball(.3,material('#6caa55'),x,.28,z,house,1,1,.85);
 }
-// Market + corner shop furniture, but open on all sides.
-addBox(5,.20,2.2,material('#a16d47'),0,.65,43);streetCollider(0,43,5,2.2,.7);
-for(const x of [-2,0,2])ball(.34,material('#dd9a68'),x,1.05,43,house);
-addBox(5,.18,2.4,material('#e3aa69'),0,.67,79);streetCollider(0,79,5,2.4,.7);
-addBox(5,.18,3.0,material('#f8e2bd'),0,2.4,79);
-// Shallow splashing fountain is a safe interactive swimming spot.
-column(2.6,2.6,.32,material('#d7d2cb'),0,.04,-73,house);
-column(2.2,2.2,.06,material('#70bfd9'),0,.23,-73,house);
-column(.20,.32,1.1,material('#e9e5da'),0,.71,-73,house);
-streetThing('Заблудившийся гном',77,-41,'none',{shape:'gnome'});
-// Buried markers: visual mounds and quest sparkles.
-for(const [x,z] of [[-40,41],[-1,-42],[-78,78],[78,78]]){
- const mound=new THREE.Mesh(new THREE.SphereGeometry(.53,12,8),soilMat);mound.position.set(x,.05,z);mound.scale.y=.21;house.add(mound);
+for(const [x,z] of [[-50,8],[-48,20],[-48,52],[-26,52],[1,51],[53,-43],[53,40],[12,-48],[-30,-51]]){
+ column(.3,.35,3,material('#84633b'),x,1.5,z,house);ball(2,material('#529e63'),x,3.7,z,house);streetCollider(x,z,.7,.7,2.5);
 }
-// Debug overlays must represent the newly built house walls as well.
+for(const [x,z] of [[-16,35],[-19,39],[-26,34],[-30,-20],[21,39],[31,46],[49,31],[-41,-12]])
+ streetThing('Садовый горшок',x,z,'knock',{shape:'plant',solid:true});
+streetThing('Садовая лавка',-2,45,'scratch',{shape:'bench',solid:true});
+streetThing('Садовый гном',-50,43,'none',{shape:'gnome'});
+column(2.4,2.4,.28,material('#d7d2cb'),-7,.01,-45,house);
+column(2,2,.05,poolWater,-7,.18,-45,house);
+streetThing('Ящик с инструментами',-37,-22,'knock',{solid:true});
+for(const [x,z] of [[-37,43],[-16,48],[-55,-47],[51,48]]){
+ const mound=new THREE.Mesh(new THREE.SphereGeometry(.58,12,8),soilMat);mound.position.set(x,.06,z);mound.scale.y=.2;house.add(mound);
+}
 for(const c of colliders.slice(oldDistrictColliderCount))if(c.source==='wall')addDebugBox(c);
-// Boundary hedges: no invisible blocking away from the visible playable rim.
-for(let k=-104;k<=104;k+=8){for(const v of [-106,106]){
- ball(1.9,material('#578c58'),k,.8,v,house,1.1,.75,.95);
- ball(1.9,material('#578c58'),v,.8,k,house,.95,.75,1.1);
- }}
 
 const stage=document.createElement('div');stage.style.cssText='position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:10;background:#fff9eedd;color:#47374a;border-radius:12px;padding:7px 12px;font:700 12px system-ui;pointer-events:none';
 stage.textContent='🏠 Загружаем Tiny Living мебель, двор и район...' ;document.body.append(stage);
