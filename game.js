@@ -322,8 +322,15 @@ function questInteract(){
  const at=questTarget(q);
  if(!nearQuest(at[0],at[1],q.site==='stray'?4.7:4.3)){toast('🧭 Подойди ближе и нажми ДЕЙСТВИЕ');return}
  if(q.kind==='choice'||q.kind==='talk'){
-  showStoryDialog(q.kind==='talk'?'🐈 Искра: '+q.title:'🧩 Загадка: '+q.title,q.story,q.options||['Продолжить'],i=>{
-   if(i!==q.answer){toast(q.kind==='talk'?'🐈 Искра сомневается. Подумай над ответом.':'❌ Неверно. Сверь подсказки в дневнике.');return false}
+  // Shuffle answer placement so choosing the first button repeatedly cannot solve puzzles.
+  const seed=q.id.split('').reduce((sum,c)=>sum*31+c.charCodeAt(0),17)>>>0;
+  const order=(q.options||['Продолжить']).map((label,index)=>({label,index}));
+  order.sort((a,b)=>((a.index*37+seed%101)%101)-((b.index*37+seed%101)%101));
+  showStoryDialog(q.kind==='talk'?'🐈 Искра: '+q.title:'🧩 Загадка: '+q.title,q.story,order.map(v=>v.label),i=>{
+   if(order[i].index!==q.answer){
+    storyText.textContent=q.story+'\n\n❌ Не тот ответ. Подумай над уликами, посмотри дневник.';
+    return false;
+   }
    storyAdvance(q);return true;
   });
  }else{storyAdvance(q);showStoryDialog(q.kind==='note'?'📜 Найдена записка':'🔎 Найдена улика',q.story)}
@@ -1598,7 +1605,9 @@ function jump(){if(!playing||!grounded||sleeping>0)return;velY=6.7;grounded=fals
 function toggleView(){viewFirstPerson=!viewFirstPerson;document.getElementById('view').textContent=viewFirstPerson?'🐈 3D-КАМЕРА':'👁️ КАМЕРА';toast(viewFirstPerson?'👁️ Вид от первого лица':'🎥 Камера от третьего лица')}
 function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,storyVersion:3,storyJournal,storyInventory:[...storyInventory],cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
 function loadGame(){try{const current=localStorage.getItem('badcat3d-house-v21');const s=JSON.parse(current||localStorage.getItem('badcat3d-estate-v20')||localStorage.getItem('badcat3d-v16')||localStorage.getItem('badcat3d-v15')||localStorage.getItem('badcat3d-v04')||'null');if(!s)return;
- score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;questIndex=s.storyVersion===3?Math.max(0,Math.min(quests.length,s.questIndex||0)):0; // v2 quest stages must not be misinterpreted as new missions.
+ score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;if(s.storyVersion!==3&&current&&!localStorage.getItem('badcat3d-quest-v2-backup'))
+   localStorage.setItem('badcat3d-quest-v2-backup',current);
+ questIndex=s.storyVersion===3?Math.max(0,Math.min(quests.length,s.questIndex||0)):0;
  ate=!!s.ate;scratched=!!s.scratched;slept=!!s.slept;escaped=!!s.escaped;
  streetKnocks=current?(s.streetKnocks||0):0;dugTreasure=!!current&&!!s.dugTreasure;buriedFish=!!current&&!!s.buriedFish;boughtMilk=false;bathed=!!current&&!!s.bathed;gnomeSaved=!!current&&!!s.gnomeSaved;dugBone=!!current&&!!s.dugBone;buriedBone=!!current&&!!s.buriedBone;neighborSlept=false;parkScratched=!!current&&!!s.parkScratched;marketFood=false;
  if(s.storyVersion===3){
@@ -1808,7 +1817,15 @@ function drawMap(){
 }
 mapCanvas.parentElement.addEventListener('pointerdown',e=>{e.stopPropagation();mapBig=!mapBig;mapCanvas.parentElement.classList.toggle('large',mapBig)});
 function render(){requestAnimationFrame(render);const dt=Math.min(clock.getDelta(),.038);elapsed+=dt;
- if(playing&&furnitureReady&&!editorOn&&!storyDialogOpen){saveTimer+=dt;if(saveTimer>12){saveTimer=0;saveGame()}
+ if(playing&&furnitureReady&&!editorOn&&!storyDialogOpen){
+  // Искра walks alongside the cat after the last garage conversation.
+  if(questIndex>=108){
+   const tx=cat.position.x+1.15,tz=cat.position.z-.85;
+   const dx=tx-strayCat.position.x,dz=tz-strayCat.position.z;
+   const len=Math.hypot(dx,dz);
+   if(len>1){const move=Math.min(len-1,dt*3.2);strayCat.position.x+=dx/len*move;strayCat.position.z+=dz/len*move;strayCat.rotation.y=Math.atan2(dx,dz)}
+  }
+  saveTimer+=dt;if(saveTimer>12){saveTimer=0;saveGame()}
   ownerAI(dt);updatePhysics(dt);updatePhysicsProps(dt);updateVisualFx(dt);
   if(sleeping>0){sleeping-=dt;energy=Math.min(100,energy+dt*10)}else{hunger=Math.max(0,hunger-dt*.18);energy=Math.max(0,energy-dt*.10)}
   mood=THREE.MathUtils.clamp(mood+dt*(hunger>25&&energy>20?.12:-.45),0,100);
