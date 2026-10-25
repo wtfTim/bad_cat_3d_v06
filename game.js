@@ -340,6 +340,22 @@ function showStoryJournal(){
  const lines=storyJournal.slice(-15).reverse().map(e=>'• '+e.title+'\n'+e.body);
  showStoryDialog('📓 Дневник расследования',(q?'Текущая задача: '+q.title+'\n\n':'')+(lines.length?lines.join('\n\n'):'Улик пока нет. Найди первую записку в парке.'));
 }
+// Garage stray NPC (Iскра) is separate from the 416-piece furniture layout.
+const strayCat=new THREE.Group();house.add(strayCat);
+strayCat.position.set(40.2,0,-35.8);
+const strayFur=material('#c38e69'),strayDark=material('#5b4138'),strayEye=material('#efc85d');
+const strayBody=new THREE.Mesh(new THREE.SphereGeometry(.32,12,9),strayFur);strayBody.scale.set(1.25,.75,1.55);strayBody.position.y=.38;strayCat.add(strayBody);
+const strayHead=new THREE.Mesh(new THREE.SphereGeometry(.235,12,9),strayFur);strayHead.position.set(0,.68,.25);strayCat.add(strayHead);
+for(const sign of [-1,1]){
+ const ear=new THREE.Mesh(new THREE.ConeGeometry(.11,.24,4),strayDark);ear.position.set(sign*.145,.88,.26);ear.rotation.z=sign*-.15;strayCat.add(ear);
+ const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,6),strayEye);eye.position.set(sign*.1,.69,.445);strayCat.add(eye);
+ const paw=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),strayFur);paw.position.set(sign*.22,.12,.39);strayCat.add(paw);
+}
+const strayTail=new THREE.Mesh(new THREE.CylinderGeometry(.047,.065,.58,7),strayDark);strayTail.position.set(-.31,.51,-.38);strayTail.rotation.x=-.65;strayCat.add(strayTail);
+const journalBtn=document.createElement('button');journalBtn.id='storyJournalBtn';journalBtn.textContent='📓 ДНЕВНИК';
+journalBtn.style.cssText='position:fixed;left:50%;top:calc(6px + env(safe-area-inset-top));transform:translateX(-50%);z-index:28;background:#fff4d9;color:#553a4a;border-radius:12px;border:2px solid #bd8c65;font:900 12px system-ui;padding:9px 12px;min-height:40px;box-shadow:0 2px 7px #0004';
+document.body.append(journalBtn);
+journalBtn.addEventListener('click',showStoryJournal);
 function floorOf(y){return y>F-1.1?F:0}
 function isBlocked(x,z,feet,r=CAT_RADIUS,height=.70,sourceFilter=null){
  if(x<-107+r||x>107-r||z<-107+r||z>107-r)return true;
@@ -1580,14 +1596,15 @@ function groom(){if(!playing)return;mood=Math.min(100,mood+3);toast('🧼 Умы
 function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');detectiveAction('meow');if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
 function jump(){if(!playing||!grounded||sleeping>0)return;velY=6.7;grounded=false;sound('jump')}
 function toggleView(){viewFirstPerson=!viewFirstPerson;document.getElementById('view').textContent=viewFirstPerson?'🐈 3D-КАМЕРА':'👁️ КАМЕРА';toast(viewFirstPerson?'👁️ Вид от первого лица':'🎥 Камера от третьего лица')}
-function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,storyVersion:2,gardenBench,gardenTrail,gardenClue,garageSearched,shedSearched,greenhouseSearched,saunaVisited,storyFinished,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
+function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,storyVersion:3,storyJournal,storyInventory:[...storyInventory],cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
 function loadGame(){try{const current=localStorage.getItem('badcat3d-house-v21');const s=JSON.parse(current||localStorage.getItem('badcat3d-estate-v20')||localStorage.getItem('badcat3d-v16')||localStorage.getItem('badcat3d-v15')||localStorage.getItem('badcat3d-v04')||'null');if(!s)return;
- score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;questIndex=s.storyVersion===2?(s.questIndex||0):0; // Old eight-step quest index belongs to a different storyline.
+ score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;questIndex=s.storyVersion===3?Math.max(0,Math.min(quests.length,s.questIndex||0)):0; // v2 quest stages must not be misinterpreted as new missions.
  ate=!!s.ate;scratched=!!s.scratched;slept=!!s.slept;escaped=!!s.escaped;
  streetKnocks=current?(s.streetKnocks||0):0;dugTreasure=!!current&&!!s.dugTreasure;buriedFish=!!current&&!!s.buriedFish;boughtMilk=false;bathed=!!current&&!!s.bathed;gnomeSaved=!!current&&!!s.gnomeSaved;dugBone=!!current&&!!s.dugBone;buriedBone=!!current&&!!s.buriedBone;neighborSlept=false;parkScratched=!!current&&!!s.parkScratched;marketFood=false;
- gardenBench=!!s.gardenBench;gardenTrail=!!s.gardenTrail;gardenClue=!!s.gardenClue;
- garageSearched=!!s.garageSearched;shedSearched=!!s.shedSearched;greenhouseSearched=!!s.greenhouseSearched;
- saunaVisited=!!s.saunaVisited;storyFinished=!!s.storyFinished;
+ if(s.storyVersion===3){
+  if(Array.isArray(s.storyJournal))storyJournal.push(...s.storyJournal.slice(-180).filter(x=>x&&typeof x.title==='string'&&typeof x.body==='string'));
+  if(Array.isArray(s.storyInventory))for(const id of s.storyInventory)if(typeof id==='string')storyInventory.add(id);
+ }
  // Avoid stale positions landing inside furniture; validate after load.
  if(current&&Array.isArray(s.cat)&&s.cat.length===3&&s.cat.every(Number.isFinite)&&Math.abs(s.cat[0])<67&&Math.abs(s.cat[2])<67)cat.position.set(...s.cat);
  updateQuest();setProgress();
@@ -1699,7 +1716,7 @@ renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointer
    moveEditedSafely(editSelected,()=>{editSelected.holder.position.x=hit.x+editOffset.x;editSelected.holder.position.z=hit.z+editOffset.z;});
   }}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
 for(const name of ['pointerup','pointercancel'])renderer.domElement.addEventListener(name,e=>{if(dragging===e.pointerId)dragging=null;if(editPointer===e.pointerId){editPointer=null;editDragMode=null;saveFurniture()}});
-document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.body.classList.add('game-started');document.getElementById('start').style.display='none';toast('🐾 Добро пожаловать! Следуй к метке на миникарте')};
+document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.body.classList.add('game-started');document.getElementById('start').style.display='none';toast('📓 Расследование началось! Открой дневник: кнопка 📓')};
 document.getElementById('reset').onclick=()=>{
  if(!confirm('Начать приключение заново? Мебель и стены останутся как есть.'))return;
  localStorage.removeItem('badcat3d-house-v21');
@@ -1775,16 +1792,27 @@ function drawMap(){
  c.strokeStyle='#886d50';c.lineWidth=2;c.strokeRect(xx(-68),zz(-68),136*scale,136*scale);
  c.fillStyle='#cdb99e';for(const b of estateBuildings)c.fillRect(xx(b.x-b.w/2),zz(b.z-b.d/2),b.w*scale,b.d*scale);
  c.fillStyle='#f0d2b9';c.fillRect(xx(-11),zz(-9),22*scale,18*scale);
- const q=quests[questIndex];if(q){const at=questTarget(q),x=xx(at[0]),z=zz(at[1]);c.strokeStyle='#fff';c.lineWidth=2;c.fillStyle='#e15b43';c.beginPath();c.arc(x,z,7,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#fff';c.font='bold 11px system-ui';c.textAlign='center';c.fillText('!',x,z+4)}
+ const q=quests[questIndex];if(q){
+ const at=questTarget(q);
+ if(q.kind==='search'||q.kind==='note'||q.kind==='inspect'){
+  // Only a rough search area, never the exact secret or correct buried cache.
+  const mid=q.kind==='search'?STORY_PLACES.rockZone:at;
+  c.strokeStyle='#f4a555';c.lineWidth=2;c.setLineDash([5,4]);
+  c.beginPath();c.arc(xx(mid[0]),zz(mid[1]),Math.max(16,11*scale),0,Math.PI*2);c.stroke();c.setLineDash([]);
+ }else{
+  c.strokeStyle='#fff';c.lineWidth=2;c.fillStyle='#e15b43';c.beginPath();
+  c.arc(xx(at[0]),zz(at[1]),6,0,Math.PI*2);c.fill();c.stroke();
+ }
+}
  c.save();c.translate(S/2,S/2);c.rotate(-cat.rotation.y);c.fillStyle='#222';c.beginPath();c.moveTo(0,9);c.lineTo(-7,-6);c.lineTo(7,-6);c.closePath();c.fill();c.strokeStyle='white';c.lineWidth=2;c.stroke();c.restore();
 }
 mapCanvas.parentElement.addEventListener('pointerdown',e=>{e.stopPropagation();mapBig=!mapBig;mapCanvas.parentElement.classList.toggle('large',mapBig)});
 function render(){requestAnimationFrame(render);const dt=Math.min(clock.getDelta(),.038);elapsed+=dt;
- if(playing&&furnitureReady&&!editorOn){saveTimer+=dt;if(saveTimer>12){saveTimer=0;saveGame()}
+ if(playing&&furnitureReady&&!editorOn&&!storyDialogOpen){saveTimer+=dt;if(saveTimer>12){saveTimer=0;saveGame()}
   ownerAI(dt);updatePhysics(dt);updatePhysicsProps(dt);updateVisualFx(dt);
   if(sleeping>0){sleeping-=dt;energy=Math.min(100,energy+dt*10)}else{hunger=Math.max(0,hunger-dt*.18);energy=Math.max(0,energy-dt*.10)}
   mood=THREE.MathUtils.clamp(mood+dt*(hunger>25&&energy>20?.12:-.45),0,100);
-  updateQuest();setProgress();updateRoom();
+  storyFrame();updateQuest();setProgress();updateRoom();
  }
  if(elapsed>messageUntil)HUD.message.style.opacity='0';
  for(const roof of roofPieces){
