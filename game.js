@@ -138,10 +138,10 @@ for(const b of [0,F]){
 }
 // Ridge and matching pitched panels sit above the 7.10m second floor.
 for(const side of [-1,1]){
- const slab=addBox(23.2,.22,9.5,mats.roof,0,2*F+.38,side*4.45);
+ const slab=addBox(23.2,.22,9.5,mats.roof,0,2*F+.78,side*4.45);
  slab.rotation.x=side*.15;roofPieces.push({mesh:slab,x:0,z:0});
 }
-addBox(23.1,.14,.26,mats.trim,0,2*F+1.10,0);
+addBox(23.1,.14,.26,mats.trim,0,2*F+1.48,0);
 for(const y of [F,2*F]){
  addBox(22.25,.14,.29,windowTrim,0,y,9.02);
  addBox(22.25,.14,.29,windowTrim,0,y,-9.02);
@@ -588,8 +588,8 @@ function groom(){if(!playing)return;mood=Math.min(100,mood+3);toast('🧼 Умы
 function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
 function jump(){if(!playing||!grounded||sleeping>0)return;velY=6.7;grounded=false;sound('jump')}
 function toggleView(){viewFirstPerson=!viewFirstPerson;document.getElementById('view').textContent=viewFirstPerson?'🐈 3D-КАМЕРА':'👁️ КАМЕРА';toast(viewFirstPerson?'👁️ Вид от первого лица':'🎥 Камера от третьего лица')}
-function saveGame(notify=false){try{localStorage.setItem('badcat3d-estate-v20',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
-function loadGame(){try{const current=localStorage.getItem('badcat3d-estate-v20');const s=JSON.parse(current||localStorage.getItem('badcat3d-v16')||localStorage.getItem('badcat3d-v15')||localStorage.getItem('badcat3d-v04')||'null');if(!s)return;
+function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
+function loadGame(){try{const current=localStorage.getItem('badcat3d-house-v21');const s=JSON.parse(current||localStorage.getItem('badcat3d-estate-v20')||localStorage.getItem('badcat3d-v16')||localStorage.getItem('badcat3d-v15')||localStorage.getItem('badcat3d-v04')||'null');if(!s)return;
  score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;questIndex=current?(s.questIndex||0):0;
  ate=!!s.ate;scratched=!!s.scratched;slept=!!s.slept;escaped=!!s.escaped;
  streetKnocks=current?(s.streetKnocks||0):0;dugTreasure=!!current&&!!s.dugTreasure;buriedFish=!!current&&!!s.buriedFish;boughtMilk=false;bathed=!!current&&!!s.bathed;gnomeSaved=!!current&&!!s.gnomeSaved;dugBone=!!current&&!!s.dugBone;buriedBone=!!current&&!!s.buriedBone;neighborSlept=false;parkScratched=!!current&&!!s.parkScratched;marketFood=false;
