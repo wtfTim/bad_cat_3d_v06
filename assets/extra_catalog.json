@@ -1,0 +1,1307 @@
+{
+  "roads:block1": {
+    "url": "./assets/extra/roads_block1.glb",
+    "label": "Block1",
+    "category": "Тропинки и дороги"
+  },
+  "roads:block2": {
+    "url": "./assets/extra/roads_block2.glb",
+    "label": "Block2",
+    "category": "Тропинки и дороги"
+  },
+  "roads:block3": {
+    "url": "./assets/extra/roads_block3.glb",
+    "label": "Block3",
+    "category": "Тропинки и дороги"
+  },
+  "roads:curvedRoad": {
+    "url": "./assets/extra/roads_curvedRoad.glb",
+    "label": "Поворот дороги",
+    "category": "Тропинки и дороги"
+  },
+  "roads:intersectionRoad": {
+    "url": "./assets/extra/roads_intersectionRoad.glb",
+    "label": "Перекрёсток",
+    "category": "Тропинки и дороги"
+  },
+  "roads:straightRoad": {
+    "url": "./assets/extra/roads_straightRoad.glb",
+    "label": "Прямая дорога",
+    "category": "Тропинки и дороги"
+  },
+  "nature2:birch_tree": {
+    "url": "./assets/extra/nature2_birch_tree.glb",
+    "label": "Берёза дерево",
+    "category": "Деревья и растения"
+  },
+  "nature2:boulder_mossy": {
+    "url": "./assets/extra/nature2_boulder_mossy.glb",
+    "label": "Валун замшелый",
+    "category": "Тропинки и дороги"
+  },
+  "nature2:bush_berries": {
+    "url": "./assets/extra/nature2_bush_berries.glb",
+    "label": "Куст ягоды",
+    "category": "Деревья и растения"
+  },
+  "nature2:bush_round": {
+    "url": "./assets/extra/nature2_bush_round.glb",
+    "label": "Куст круглое",
+    "category": "Деревья и растения"
+  },
+  "nature2:cactus": {
+    "url": "./assets/extra/nature2_cactus.glb",
+    "label": "Кактус",
+    "category": "Деревья и растения"
+  },
+  "nature2:cattails": {
+    "url": "./assets/extra/nature2_cattails.glb",
+    "label": "Камыш",
+    "category": "Сад и участок"
+  },
+  "nature2:dead_tree": {
+    "url": "./assets/extra/nature2_dead_tree.glb",
+    "label": "Сухое дерево",
+    "category": "Деревья и растения"
+  },
+  "nature2:fallen_log": {
+    "url": "./assets/extra/nature2_fallen_log.glb",
+    "label": "Упавший бревно",
+    "category": "Тропинки и дороги"
+  },
+  "nature2:fern": {
+    "url": "./assets/extra/nature2_fern.glb",
+    "label": "Папоротник",
+    "category": "Деревья и растения"
+  },
+  "nature2:flower_purple": {
+    "url": "./assets/extra/nature2_flower_purple.glb",
+    "label": "Цветы фиолетовые",
+    "category": "Деревья и растения"
+  },
+  "nature2:flower_red": {
+    "url": "./assets/extra/nature2_flower_red.glb",
+    "label": "Цветы красные",
+    "category": "Деревья и растения"
+  },
+  "nature2:flower_yellow": {
+    "url": "./assets/extra/nature2_flower_yellow.glb",
+    "label": "Цветы жёлтые",
+    "category": "Деревья и растения"
+  },
+  "nature2:grass_tuft": {
+    "url": "./assets/extra/nature2_grass_tuft.glb",
+    "label": "Трава пучок",
+    "category": "Деревья и растения"
+  },
+  "nature2:lily_pad": {
+    "url": "./assets/extra/nature2_lily_pad.glb",
+    "label": "Лилия лист",
+    "category": "Сад и участок"
+  },
+  "nature2:mushroom_cluster": {
+    "url": "./assets/extra/nature2_mushroom_cluster.glb",
+    "label": "Грибы группа",
+    "category": "Деревья и растения"
+  },
+  "nature2:mushroom_red": {
+    "url": "./assets/extra/nature2_mushroom_red.glb",
+    "label": "Грибы красные",
+    "category": "Деревья и растения"
+  },
+  "nature2:palm_tree": {
+    "url": "./assets/extra/nature2_palm_tree.glb",
+    "label": "Пальма дерево",
+    "category": "Деревья и растения"
+  },
+  "nature2:pine_tall": {
+    "url": "./assets/extra/nature2_pine_tall.glb",
+    "label": "Сосна tall",
+    "category": "Деревья и растения"
+  },
+  "nature2:pine_tree": {
+    "url": "./assets/extra/nature2_pine_tree.glb",
+    "label": "Сосна дерево",
+    "category": "Деревья и растения"
+  },
+  "nature2:rock_cluster": {
+    "url": "./assets/extra/nature2_rock_cluster.glb",
+    "label": "Камень группа",
+    "category": "Тропинки и дороги"
+  },
+  "nature2:rock_flat": {
+    "url": "./assets/extra/nature2_rock_flat.glb",
+    "label": "Камень flat",
+    "category": "Тропинки и дороги"
+  },
+  "nature2:rock_large": {
+    "url": "./assets/extra/nature2_rock_large.glb",
+    "label": "Камень большой",
+    "category": "Тропинки и дороги"
+  },
+  "nature2:rock_small": {
+    "url": "./assets/extra/nature2_rock_small.glb",
+    "label": "Камень маленький",
+    "category": "Тропинки и дороги"
+  },
+  "nature2:round_tree": {
+    "url": "./assets/extra/nature2_round_tree.glb",
+    "label": "Круглое дерево",
+    "category": "Деревья и растения"
+  },
+  "nature2:tree_stump": {
+    "url": "./assets/extra/nature2_tree_stump.glb",
+    "label": "Дерево пень",
+    "category": "Деревья и растения"
+  },
+  "hydro:basil_pot": {
+    "url": "./assets/extra/hydro_basil_pot.glb",
+    "label": "Базилик горшок",
+    "category": "Теплица и огород"
+  },
+  "hydro:cold_frame": {
+    "url": "./assets/extra/hydro_cold_frame.glb",
+    "label": "Холодный парник",
+    "category": "Теплица и огород"
+  },
+  "hydro:cucumber_trellis": {
+    "url": "./assets/extra/hydro_cucumber_trellis.glb",
+    "label": "Огурцы шпалера",
+    "category": "Теплица и огород"
+  },
+  "hydro:dwc_bucket": {
+    "url": "./assets/extra/hydro_dwc_bucket.glb",
+    "label": "Гидропонный ведро",
+    "category": "Теплица и огород"
+  },
+  "hydro:fan": {
+    "url": "./assets/extra/hydro_fan.glb",
+    "label": "Вентилятор",
+    "category": "Теплица и огород"
+  },
+  "hydro:greenhouse": {
+    "url": "./assets/extra/hydro_greenhouse.glb",
+    "label": "Теплица",
+    "category": "Теплица и огород"
+  },
+  "hydro:grow_light": {
+    "url": "./assets/extra/hydro_grow_light.glb",
+    "label": "Растения лампа",
+    "category": "Теплица и огород"
+  },
+  "hydro:grow_tent": {
+    "url": "./assets/extra/hydro_grow_tent.glb",
+    "label": "Растения шатёр",
+    "category": "Теплица и огород"
+  },
+  "hydro:grow_tray": {
+    "url": "./assets/extra/hydro_grow_tray.glb",
+    "label": "Растения лоток",
+    "category": "Теплица и огород"
+  },
+  "hydro:harvest_crate": {
+    "url": "./assets/extra/hydro_harvest_crate.glb",
+    "label": "Урожай ящик",
+    "category": "Теплица и огород"
+  },
+  "hydro:lettuce_head": {
+    "url": "./assets/extra/hydro_lettuce_head.glb",
+    "label": "Салат кочан",
+    "category": "Теплица и огород"
+  },
+  "hydro:nft_channel": {
+    "url": "./assets/extra/hydro_nft_channel.glb",
+    "label": "Канал канал",
+    "category": "Теплица и огород"
+  },
+  "hydro:nutrient_bottles": {
+    "url": "./assets/extra/hydro_nutrient_bottles.glb",
+    "label": "Удобрения бутылки",
+    "category": "Теплица и огород"
+  },
+  "hydro:ph_meter": {
+    "url": "./assets/extra/hydro_ph_meter.glb",
+    "label": "Ph измеритель",
+    "category": "Теплица и огород"
+  },
+  "hydro:pipe_rack": {
+    "url": "./assets/extra/hydro_pipe_rack.glb",
+    "label": "Труба стеллаж",
+    "category": "Теплица и огород"
+  },
+  "hydro:potting_bench": {
+    "url": "./assets/extra/hydro_potting_bench.glb",
+    "label": "Стол для рассады",
+    "category": "Теплица и огород"
+  },
+  "hydro:reservoir": {
+    "url": "./assets/extra/hydro_reservoir.glb",
+    "label": "Резервуар",
+    "category": "Теплица и огород"
+  },
+  "hydro:seedling_tray": {
+    "url": "./assets/extra/hydro_seedling_tray.glb",
+    "label": "Рассада лоток",
+    "category": "Теплица и огород"
+  },
+  "hydro:small_greenhouse": {
+    "url": "./assets/extra/hydro_small_greenhouse.glb",
+    "label": "Маленькая теплица",
+    "category": "Теплица и огород"
+  },
+  "hydro:strawberry_planter": {
+    "url": "./assets/extra/hydro_strawberry_planter.glb",
+    "label": "Клубника кашпо",
+    "category": "Теплица и огород"
+  },
+  "hydro:tomato_plant": {
+    "url": "./assets/extra/hydro_tomato_plant.glb",
+    "label": "Томат растение",
+    "category": "Теплица и огород"
+  },
+  "hydro:vertical_tower": {
+    "url": "./assets/extra/hydro_vertical_tower.glb",
+    "label": "Вертикальная башня",
+    "category": "Теплица и огород"
+  },
+  "hydro:water_pump": {
+    "url": "./assets/extra/hydro_water_pump.glb",
+    "label": "Вода насос",
+    "category": "Теплица и огород"
+  },
+  "hydro:water_tank": {
+    "url": "./assets/extra/hydro_water_tank.glb",
+    "label": "Вода бак",
+    "category": "Теплица и огород"
+  },
+  "hydro:watering_can": {
+    "url": "./assets/extra/hydro_watering_can.glb",
+    "label": "Поливочный лейка",
+    "category": "Теплица и огород"
+  },
+  "garage:air_compressor": {
+    "url": "./assets/extra/garage_air_compressor.glb",
+    "label": "Воздушный компрессор",
+    "category": "Гараж и инструменты"
+  },
+  "garage:battery_charger": {
+    "url": "./assets/extra/garage_battery_charger.glb",
+    "label": "Аккумулятор зарядка",
+    "category": "Гараж и инструменты"
+  },
+  "garage:car_lift": {
+    "url": "./assets/extra/garage_car_lift.glb",
+    "label": "Автомобиль подъёмник",
+    "category": "Гараж и инструменты"
+  },
+  "garage:fire_extinguisher": {
+    "url": "./assets/extra/garage_fire_extinguisher.glb",
+    "label": "Огнетушитель огнетушитель",
+    "category": "Гараж и инструменты"
+  },
+  "garage:floor_jack": {
+    "url": "./assets/extra/garage_floor_jack.glb",
+    "label": "Напольный домкрат",
+    "category": "Гараж и инструменты"
+  },
+  "garage:garage_door": {
+    "url": "./assets/extra/garage_garage_door.glb",
+    "label": "Гаражные ворота",
+    "category": "Гараж и инструменты"
+  },
+  "garage:garage_sign": {
+    "url": "./assets/extra/garage_garage_sign.glb",
+    "label": "Гараж табличка",
+    "category": "Гараж и инструменты"
+  },
+  "garage:garage_stool": {
+    "url": "./assets/extra/garage_garage_stool.glb",
+    "label": "Гараж табурет",
+    "category": "Гараж и инструменты"
+  },
+  "garage:gas_pump": {
+    "url": "./assets/extra/garage_gas_pump.glb",
+    "label": "Бензин насос",
+    "category": "Гараж и инструменты"
+  },
+  "garage:hammer": {
+    "url": "./assets/extra/garage_hammer.glb",
+    "label": "Молоток",
+    "category": "Гараж и инструменты"
+  },
+  "garage:hanging_lamp": {
+    "url": "./assets/extra/garage_hanging_lamp.glb",
+    "label": "Подвесной лампа",
+    "category": "Гараж и инструменты"
+  },
+  "garage:jerry_can": {
+    "url": "./assets/extra/garage_jerry_can.glb",
+    "label": "Канистра лейка",
+    "category": "Гараж и инструменты"
+  },
+  "garage:mechanic_creeper": {
+    "url": "./assets/extra/garage_mechanic_creeper.glb",
+    "label": "Механика лежак",
+    "category": "Гараж и инструменты"
+  },
+  "garage:motorcycle": {
+    "url": "./assets/extra/garage_motorcycle.glb",
+    "label": "Мотоцикл",
+    "category": "Гараж и инструменты"
+  },
+  "garage:oil_barrel": {
+    "url": "./assets/extra/garage_oil_barrel.glb",
+    "label": "Масло бочка",
+    "category": "Гараж и инструменты"
+  },
+  "garage:oil_can": {
+    "url": "./assets/extra/garage_oil_can.glb",
+    "label": "Масло лейка",
+    "category": "Гараж и инструменты"
+  },
+  "garage:parts_shelf": {
+    "url": "./assets/extra/garage_parts_shelf.glb",
+    "label": "Стеллаж для запчастей",
+    "category": "Гараж и инструменты"
+  },
+  "garage:pegboard": {
+    "url": "./assets/extra/garage_pegboard.glb",
+    "label": "Панель для инструментов",
+    "category": "Гараж и инструменты"
+  },
+  "garage:power_drill": {
+    "url": "./assets/extra/garage_power_drill.glb",
+    "label": "Электро дрель",
+    "category": "Гараж и инструменты"
+  },
+  "garage:sedan_car": {
+    "url": "./assets/extra/garage_sedan_car.glb",
+    "label": "Легковой автомобиль",
+    "category": "Гараж и инструменты"
+  },
+  "garage:single_tire": {
+    "url": "./assets/extra/garage_single_tire.glb",
+    "label": "Один шина",
+    "category": "Гараж и инструменты"
+  },
+  "garage:spare_wheel_rack": {
+    "url": "./assets/extra/garage_spare_wheel_rack.glb",
+    "label": "Стеллаж для колёс",
+    "category": "Гараж и инструменты"
+  },
+  "garage:tire_stack": {
+    "url": "./assets/extra/garage_tire_stack.glb",
+    "label": "Стопка шин",
+    "category": "Гараж и инструменты"
+  },
+  "garage:tool_chest": {
+    "url": "./assets/extra/garage_tool_chest.glb",
+    "label": "Инструментальный шкаф",
+    "category": "Гараж и инструменты"
+  },
+  "garage:toolbox": {
+    "url": "./assets/extra/garage_toolbox.glb",
+    "label": "Ящик инструментов",
+    "category": "Гараж и инструменты"
+  },
+  "garage:traffic_cone": {
+    "url": "./assets/extra/garage_traffic_cone.glb",
+    "label": "Дорожный конус",
+    "category": "Гараж и инструменты"
+  },
+  "garage:workbench": {
+    "url": "./assets/extra/garage_workbench.glb",
+    "label": "Верстак",
+    "category": "Гараж и инструменты"
+  },
+  "garage:wrench_set": {
+    "url": "./assets/extra/garage_wrench_set.glb",
+    "label": "Гаечные ключи комплект",
+    "category": "Гараж и инструменты"
+  },
+  "garden2:apple_tree": {
+    "url": "./assets/extra/garden2_apple_tree.glb",
+    "label": "Яблоня дерево",
+    "category": "Деревья и растения"
+  },
+  "garden2:bird_bath": {
+    "url": "./assets/extra/garden2_bird_bath.glb",
+    "label": "Птичий поилка",
+    "category": "Сад и участок"
+  },
+  "garden2:compost_bin": {
+    "url": "./assets/extra/garden2_compost_bin.glb",
+    "label": "Компост контейнер",
+    "category": "Сад и участок"
+  },
+  "garden2:garden_bench": {
+    "url": "./assets/extra/garden2_garden_bench.glb",
+    "label": "Садовый скамейка",
+    "category": "Сад и участок"
+  },
+  "garden2:garden_gate": {
+    "url": "./assets/extra/garden2_garden_gate.glb",
+    "label": "Садовый калитка",
+    "category": "Тропинки и дороги"
+  },
+  "garden2:garden_gnome": {
+    "url": "./assets/extra/garden2_garden_gnome.glb",
+    "label": "Садовый gnome",
+    "category": "Сад и участок"
+  },
+  "garden2:garden_path": {
+    "url": "./assets/extra/garden2_garden_path.glb",
+    "label": "Садовая тропинка",
+    "category": "Тропинки и дороги"
+  },
+  "garden2:garden_rake": {
+    "url": "./assets/extra/garden2_garden_rake.glb",
+    "label": "Садовые грабли",
+    "category": "Сад и участок"
+  },
+  "garden2:garden_shed": {
+    "url": "./assets/extra/garden2_garden_shed.glb",
+    "label": "Садовый сарай",
+    "category": "Сад и участок"
+  },
+  "garden2:garden_shovel": {
+    "url": "./assets/extra/garden2_garden_shovel.glb",
+    "label": "Садовая лопата",
+    "category": "Сад и участок"
+  },
+  "garden2:garden_table_set": {
+    "url": "./assets/extra/garden2_garden_table_set.glb",
+    "label": "Садовый стол комплект",
+    "category": "Сад и участок"
+  },
+  "garden2:greenhouse": {
+    "url": "./assets/extra/garden2_greenhouse.glb",
+    "label": "Теплица",
+    "category": "Сад и участок"
+  },
+  "garden2:hedge_corner": {
+    "url": "./assets/extra/garden2_hedge_corner.glb",
+    "label": "Живая изгородь угловая",
+    "category": "Деревья и растения"
+  },
+  "garden2:hedge_straight": {
+    "url": "./assets/extra/garden2_hedge_straight.glb",
+    "label": "Живая изгородь прямая",
+    "category": "Деревья и растения"
+  },
+  "garden2:lantern_post": {
+    "url": "./assets/extra/garden2_lantern_post.glb",
+    "label": "Фонарь столб",
+    "category": "Сад и участок"
+  },
+  "garden2:lavender_row": {
+    "url": "./assets/extra/garden2_lavender_row.glb",
+    "label": "Лаванда ряд",
+    "category": "Деревья и растения"
+  },
+  "garden2:mushroom_cluster": {
+    "url": "./assets/extra/garden2_mushroom_cluster.glb",
+    "label": "Грибы группа",
+    "category": "Деревья и растения"
+  },
+  "garden2:pergola": {
+    "url": "./assets/extra/garden2_pergola.glb",
+    "label": "Пергола",
+    "category": "Сад и участок"
+  },
+  "garden2:picket_fence": {
+    "url": "./assets/extra/garden2_picket_fence.glb",
+    "label": "Штакетник ограждение",
+    "category": "Тропинки и дороги"
+  },
+  "garden2:potted_cactus": {
+    "url": "./assets/extra/garden2_potted_cactus.glb",
+    "label": "В горшке кактус",
+    "category": "Деревья и растения"
+  },
+  "garden2:potted_fern": {
+    "url": "./assets/extra/garden2_potted_fern.glb",
+    "label": "В горшке папоротник",
+    "category": "Деревья и растения"
+  },
+  "garden2:potted_flower_pink": {
+    "url": "./assets/extra/garden2_potted_flower_pink.glb",
+    "label": "В горшке цветы pink",
+    "category": "Деревья и растения"
+  },
+  "garden2:potted_flower_red": {
+    "url": "./assets/extra/garden2_potted_flower_red.glb",
+    "label": "В горшке цветы красные",
+    "category": "Деревья и растения"
+  },
+  "garden2:raised_bed": {
+    "url": "./assets/extra/garden2_raised_bed.glb",
+    "label": "Огородная грядка",
+    "category": "Сад и участок"
+  },
+  "garden2:rose_bush": {
+    "url": "./assets/extra/garden2_rose_bush.glb",
+    "label": "Роза куст",
+    "category": "Деревья и растения"
+  },
+  "garden2:small_tree": {
+    "url": "./assets/extra/garden2_small_tree.glb",
+    "label": "Маленький дерево",
+    "category": "Деревья и растения"
+  },
+  "garden2:stone_fountain": {
+    "url": "./assets/extra/garden2_stone_fountain.glb",
+    "label": "Каменный фонтан",
+    "category": "Тропинки и дороги"
+  },
+  "garden2:sunflower": {
+    "url": "./assets/extra/garden2_sunflower.glb",
+    "label": "Подсолнух",
+    "category": "Деревья и растения"
+  },
+  "garden2:topiary_ball": {
+    "url": "./assets/extra/garden2_topiary_ball.glb",
+    "label": "Топиарий шар",
+    "category": "Деревья и растения"
+  },
+  "garden2:topiary_cone": {
+    "url": "./assets/extra/garden2_topiary_cone.glb",
+    "label": "Топиарий конус",
+    "category": "Деревья и растения"
+  },
+  "garden2:tulip_patch": {
+    "url": "./assets/extra/garden2_tulip_patch.glb",
+    "label": "Тюльпан patch",
+    "category": "Деревья и растения"
+  },
+  "garden2:umbrella_parasol": {
+    "url": "./assets/extra/garden2_umbrella_parasol.glb",
+    "label": "Зонт зонт",
+    "category": "Сад и участок"
+  },
+  "garden2:watering_can": {
+    "url": "./assets/extra/garden2_watering_can.glb",
+    "label": "Поливочный лейка",
+    "category": "Сад и участок"
+  },
+  "garden2:wheelbarrow": {
+    "url": "./assets/extra/garden2_wheelbarrow.glb",
+    "label": "Тачка",
+    "category": "Сад и участок"
+  },
+  "factory:arrow-basic-rounded": {
+    "url": "./assets/extra/factory_arrow-basic-rounded.glb",
+    "label": "Стрелка обычная скруглённый",
+    "category": "Сарай и мастерская"
+  },
+  "factory:arrow-basic": {
+    "url": "./assets/extra/factory_arrow-basic.glb",
+    "label": "Стрелка обычная",
+    "category": "Сарай и мастерская"
+  },
+  "factory:arrow-rounded": {
+    "url": "./assets/extra/factory_arrow-rounded.glb",
+    "label": "Стрелка скруглённый",
+    "category": "Сарай и мастерская"
+  },
+  "factory:arrow": {
+    "url": "./assets/extra/factory_arrow.glb",
+    "label": "Стрелка",
+    "category": "Сарай и мастерская"
+  },
+  "factory:box-large": {
+    "url": "./assets/extra/factory_box-large.glb",
+    "label": "Коробка большой",
+    "category": "Сарай и мастерская"
+  },
+  "factory:box-long": {
+    "url": "./assets/extra/factory_box-long.glb",
+    "label": "Коробка длинный",
+    "category": "Сарай и мастерская"
+  },
+  "factory:box-small": {
+    "url": "./assets/extra/factory_box-small.glb",
+    "label": "Коробка маленький",
+    "category": "Сарай и мастерская"
+  },
+  "factory:box-wide": {
+    "url": "./assets/extra/factory_box-wide.glb",
+    "label": "Коробка широкий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:button-floor-round-small": {
+    "url": "./assets/extra/factory_button-floor-round-small.glb",
+    "label": "Кнопка напольный круглое маленький",
+    "category": "Сарай и мастерская"
+  },
+  "factory:button-floor-round": {
+    "url": "./assets/extra/factory_button-floor-round.glb",
+    "label": "Кнопка напольный круглое",
+    "category": "Сарай и мастерская"
+  },
+  "factory:button-floor-square-small": {
+    "url": "./assets/extra/factory_button-floor-square-small.glb",
+    "label": "Кнопка напольный square маленький",
+    "category": "Сарай и мастерская"
+  },
+  "factory:button-floor-square": {
+    "url": "./assets/extra/factory_button-floor-square.glb",
+    "label": "Кнопка напольный square",
+    "category": "Сарай и мастерская"
+  },
+  "factory:catwalk-corner": {
+    "url": "./assets/extra/factory_catwalk-corner.glb",
+    "label": "Catwalk угловая",
+    "category": "Сарай и мастерская"
+  },
+  "factory:catwalk-cross": {
+    "url": "./assets/extra/factory_catwalk-cross.glb",
+    "label": "Catwalk крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:catwalk-junction": {
+    "url": "./assets/extra/factory_catwalk-junction.glb",
+    "label": "Catwalk развилка",
+    "category": "Сарай и мастерская"
+  },
+  "factory:catwalk-stairs-loop": {
+    "url": "./assets/extra/factory_catwalk-stairs-loop.glb",
+    "label": "Catwalk лестница loop",
+    "category": "Сарай и мастерская"
+  },
+  "factory:catwalk-stairs": {
+    "url": "./assets/extra/factory_catwalk-stairs.glb",
+    "label": "Catwalk лестница",
+    "category": "Сарай и мастерская"
+  },
+  "factory:catwalk-straight": {
+    "url": "./assets/extra/factory_catwalk-straight.glb",
+    "label": "Catwalk прямая",
+    "category": "Сарай и мастерская"
+  },
+  "factory:cog-a": {
+    "url": "./assets/extra/factory_cog-a.glb",
+    "label": "Шестерня а",
+    "category": "Сарай и мастерская"
+  },
+  "factory:cog-b": {
+    "url": "./assets/extra/factory_cog-b.glb",
+    "label": "Шестерня б",
+    "category": "Сарай и мастерская"
+  },
+  "factory:cog-c": {
+    "url": "./assets/extra/factory_cog-c.glb",
+    "label": "Шестерня в",
+    "category": "Сарай и мастерская"
+  },
+  "factory:cog-d": {
+    "url": "./assets/extra/factory_cog-d.glb",
+    "label": "Шестерня г",
+    "category": "Сарай и мастерская"
+  },
+  "factory:cog-e": {
+    "url": "./assets/extra/factory_cog-e.glb",
+    "label": "Шестерня e",
+    "category": "Сарай и мастерская"
+  },
+  "factory:cone": {
+    "url": "./assets/extra/factory_cone.glb",
+    "label": "Конус",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-fence-slope": {
+    "url": "./assets/extra/factory_conveyor-bars-fence-slope.glb",
+    "label": "Конвейер bars ограждение наклон",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-fence": {
+    "url": "./assets/extra/factory_conveyor-bars-fence.glb",
+    "label": "Конвейер bars ограждение",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-high-slope": {
+    "url": "./assets/extra/factory_conveyor-bars-high-slope.glb",
+    "label": "Конвейер bars высокий наклон",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-high": {
+    "url": "./assets/extra/factory_conveyor-bars-high.glb",
+    "label": "Конвейер bars высокий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-sides": {
+    "url": "./assets/extra/factory_conveyor-bars-sides.glb",
+    "label": "Конвейер bars борта",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-stripe-fence-slope": {
+    "url": "./assets/extra/factory_conveyor-bars-stripe-fence-slope.glb",
+    "label": "Конвейер bars полоса ограждение наклон",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-stripe-fence": {
+    "url": "./assets/extra/factory_conveyor-bars-stripe-fence.glb",
+    "label": "Конвейер bars полоса ограждение",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-stripe-high-slope": {
+    "url": "./assets/extra/factory_conveyor-bars-stripe-high-slope.glb",
+    "label": "Конвейер bars полоса высокий наклон",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-stripe-high": {
+    "url": "./assets/extra/factory_conveyor-bars-stripe-high.glb",
+    "label": "Конвейер bars полоса высокий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-stripe-side": {
+    "url": "./assets/extra/factory_conveyor-bars-stripe-side.glb",
+    "label": "Конвейер bars полоса side",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars-stripe": {
+    "url": "./assets/extra/factory_conveyor-bars-stripe.glb",
+    "label": "Конвейер bars полоса",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-bars": {
+    "url": "./assets/extra/factory_conveyor-bars.glb",
+    "label": "Конвейер bars",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-corner": {
+    "url": "./assets/extra/factory_conveyor-corner.glb",
+    "label": "Конвейер угловая",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-cross": {
+    "url": "./assets/extra/factory_conveyor-cross.glb",
+    "label": "Конвейер крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-junction-t": {
+    "url": "./assets/extra/factory_conveyor-junction-t.glb",
+    "label": "Конвейер развилка t",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-part-end": {
+    "url": "./assets/extra/factory_conveyor-long-part-end.glb",
+    "label": "Конвейер длинный часть конец",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-part-middle": {
+    "url": "./assets/extra/factory_conveyor-long-part-middle.glb",
+    "label": "Конвейер длинный часть середина",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-sides-part-end": {
+    "url": "./assets/extra/factory_conveyor-long-sides-part-end.glb",
+    "label": "Конвейер длинный борта часть конец",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-sides-part-middle": {
+    "url": "./assets/extra/factory_conveyor-long-sides-part-middle.glb",
+    "label": "Конвейер длинный борта часть середина",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-sides": {
+    "url": "./assets/extra/factory_conveyor-long-sides.glb",
+    "label": "Конвейер длинный борта",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-stripe-sides-part-end": {
+    "url": "./assets/extra/factory_conveyor-long-stripe-sides-part-end.glb",
+    "label": "Конвейер длинный полоса борта часть конец",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-stripe-sides-part-middle": {
+    "url": "./assets/extra/factory_conveyor-long-stripe-sides-part-middle.glb",
+    "label": "Конвейер длинный полоса борта часть середина",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-stripe-sides": {
+    "url": "./assets/extra/factory_conveyor-long-stripe-sides.glb",
+    "label": "Конвейер длинный полоса борта",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long-stripe": {
+    "url": "./assets/extra/factory_conveyor-long-stripe.glb",
+    "label": "Конвейер длинный полоса",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-long": {
+    "url": "./assets/extra/factory_conveyor-long.glb",
+    "label": "Конвейер длинный",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-sides-cross": {
+    "url": "./assets/extra/factory_conveyor-sides-cross.glb",
+    "label": "Конвейер борта крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-sides-junction-t": {
+    "url": "./assets/extra/factory_conveyor-sides-junction-t.glb",
+    "label": "Конвейер борта развилка t",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-sides": {
+    "url": "./assets/extra/factory_conveyor-sides.glb",
+    "label": "Конвейер борта",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-corner": {
+    "url": "./assets/extra/factory_conveyor-stripe-corner.glb",
+    "label": "Конвейер полоса угловая",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-cross": {
+    "url": "./assets/extra/factory_conveyor-stripe-cross.glb",
+    "label": "Конвейер полоса крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-junction-t": {
+    "url": "./assets/extra/factory_conveyor-stripe-junction-t.glb",
+    "label": "Конвейер полоса развилка t",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-part-end": {
+    "url": "./assets/extra/factory_conveyor-stripe-part-end.glb",
+    "label": "Конвейер полоса часть конец",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-part-middle": {
+    "url": "./assets/extra/factory_conveyor-stripe-part-middle.glb",
+    "label": "Конвейер полоса часть середина",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-sides-cross": {
+    "url": "./assets/extra/factory_conveyor-stripe-sides-cross.glb",
+    "label": "Конвейер полоса борта крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-sides-junction-t": {
+    "url": "./assets/extra/factory_conveyor-stripe-sides-junction-t.glb",
+    "label": "Конвейер полоса борта развилка t",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe-sides": {
+    "url": "./assets/extra/factory_conveyor-stripe-sides.glb",
+    "label": "Конвейер полоса борта",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor-stripe": {
+    "url": "./assets/extra/factory_conveyor-stripe.glb",
+    "label": "Конвейер полоса",
+    "category": "Сарай и мастерская"
+  },
+  "factory:conveyor": {
+    "url": "./assets/extra/factory_conveyor.glb",
+    "label": "Конвейер",
+    "category": "Сарай и мастерская"
+  },
+  "factory:crane-lift": {
+    "url": "./assets/extra/factory_crane-lift.glb",
+    "label": "Кран подъёмник",
+    "category": "Сарай и мастерская"
+  },
+  "factory:crane-magnet": {
+    "url": "./assets/extra/factory_crane-magnet.glb",
+    "label": "Кран magnet",
+    "category": "Сарай и мастерская"
+  },
+  "factory:crane": {
+    "url": "./assets/extra/factory_crane.glb",
+    "label": "Кран",
+    "category": "Сарай и мастерская"
+  },
+  "factory:door-wide-closed": {
+    "url": "./assets/extra/factory_door-wide-closed.glb",
+    "label": "Ворота широкий закрытый",
+    "category": "Сарай и мастерская"
+  },
+  "factory:door-wide-half": {
+    "url": "./assets/extra/factory_door-wide-half.glb",
+    "label": "Ворота широкий half",
+    "category": "Сарай и мастерская"
+  },
+  "factory:door-wide-open": {
+    "url": "./assets/extra/factory_door-wide-open.glb",
+    "label": "Ворота широкий открытый",
+    "category": "Сарай и мастерская"
+  },
+  "factory:door": {
+    "url": "./assets/extra/factory_door.glb",
+    "label": "Ворота",
+    "category": "Сарай и мастерская"
+  },
+  "factory:floor-large": {
+    "url": "./assets/extra/factory_floor-large.glb",
+    "label": "Напольный большой",
+    "category": "Сарай и мастерская"
+  },
+  "factory:floor": {
+    "url": "./assets/extra/factory_floor.glb",
+    "label": "Напольный",
+    "category": "Сарай и мастерская"
+  },
+  "factory:hopper-high-round": {
+    "url": "./assets/extra/factory_hopper-high-round.glb",
+    "label": "Hopper высокий круглое",
+    "category": "Сарай и мастерская"
+  },
+  "factory:hopper-high-square": {
+    "url": "./assets/extra/factory_hopper-high-square.glb",
+    "label": "Hopper высокий square",
+    "category": "Сарай и мастерская"
+  },
+  "factory:hopper-round": {
+    "url": "./assets/extra/factory_hopper-round.glb",
+    "label": "Hopper круглое",
+    "category": "Сарай и мастерская"
+  },
+  "factory:hopper-square": {
+    "url": "./assets/extra/factory_hopper-square.glb",
+    "label": "Hopper square",
+    "category": "Сарай и мастерская"
+  },
+  "factory:indicator-special-area": {
+    "url": "./assets/extra/factory_indicator-special-area.glb",
+    "label": "Indicator special area",
+    "category": "Сарай и мастерская"
+  },
+  "factory:indicator-special-arrow": {
+    "url": "./assets/extra/factory_indicator-special-arrow.glb",
+    "label": "Indicator special стрелка",
+    "category": "Сарай и мастерская"
+  },
+  "factory:indicator-special-cross": {
+    "url": "./assets/extra/factory_indicator-special-cross.glb",
+    "label": "Indicator special крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:indicator-special-lines": {
+    "url": "./assets/extra/factory_indicator-special-lines.glb",
+    "label": "Indicator special lines",
+    "category": "Сарай и мастерская"
+  },
+  "factory:lever-double": {
+    "url": "./assets/extra/factory_lever-double.glb",
+    "label": "Lever double",
+    "category": "Сарай и мастерская"
+  },
+  "factory:lever-single": {
+    "url": "./assets/extra/factory_lever-single.glb",
+    "label": "Lever один",
+    "category": "Сарай и мастерская"
+  },
+  "factory:machine-bed": {
+    "url": "./assets/extra/factory_machine-bed.glb",
+    "label": "Станок грядка",
+    "category": "Сарай и мастерская"
+  },
+  "factory:machine-connection-hole": {
+    "url": "./assets/extra/factory_machine-connection-hole.glb",
+    "label": "Станок connection hole",
+    "category": "Сарай и мастерская"
+  },
+  "factory:machine-connection-pipe": {
+    "url": "./assets/extra/factory_machine-connection-pipe.glb",
+    "label": "Станок connection труба",
+    "category": "Сарай и мастерская"
+  },
+  "factory:machine-fortified": {
+    "url": "./assets/extra/factory_machine-fortified.glb",
+    "label": "Станок fortified",
+    "category": "Сарай и мастерская"
+  },
+  "factory:machine-window-bar": {
+    "url": "./assets/extra/factory_machine-window-bar.glb",
+    "label": "Станок window bar",
+    "category": "Сарай и мастерская"
+  },
+  "factory:machine-window": {
+    "url": "./assets/extra/factory_machine-window.glb",
+    "label": "Станок window",
+    "category": "Сарай и мастерская"
+  },
+  "factory:machine": {
+    "url": "./assets/extra/factory_machine.glb",
+    "label": "Станок",
+    "category": "Сарай и мастерская"
+  },
+  "factory:oopi": {
+    "url": "./assets/extra/factory_oopi.glb",
+    "label": "Oopi",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-bend": {
+    "url": "./assets/extra/factory_pipe-glass-large-bend.glb",
+    "label": "Труба glass большой bend",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-bump": {
+    "url": "./assets/extra/factory_pipe-glass-large-bump.glb",
+    "label": "Труба glass большой bump",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-cross": {
+    "url": "./assets/extra/factory_pipe-glass-large-cross.glb",
+    "label": "Труба glass большой крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-curve": {
+    "url": "./assets/extra/factory_pipe-glass-large-curve.glb",
+    "label": "Труба glass большой curve",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-junction": {
+    "url": "./assets/extra/factory_pipe-glass-large-junction.glb",
+    "label": "Труба glass большой развилка",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-long": {
+    "url": "./assets/extra/factory_pipe-glass-large-long.glb",
+    "label": "Труба glass большой длинный",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-side": {
+    "url": "./assets/extra/factory_pipe-glass-large-side.glb",
+    "label": "Труба glass большой side",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large-valve": {
+    "url": "./assets/extra/factory_pipe-glass-large-valve.glb",
+    "label": "Труба glass большой valve",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-glass-large": {
+    "url": "./assets/extra/factory_pipe-glass-large.glb",
+    "label": "Труба glass большой",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-bend": {
+    "url": "./assets/extra/factory_pipe-large-bend.glb",
+    "label": "Труба большой bend",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-bump": {
+    "url": "./assets/extra/factory_pipe-large-bump.glb",
+    "label": "Труба большой bump",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-cross": {
+    "url": "./assets/extra/factory_pipe-large-cross.glb",
+    "label": "Труба большой крест",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-curve": {
+    "url": "./assets/extra/factory_pipe-large-curve.glb",
+    "label": "Труба большой curve",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-junction": {
+    "url": "./assets/extra/factory_pipe-large-junction.glb",
+    "label": "Труба большой развилка",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-long": {
+    "url": "./assets/extra/factory_pipe-large-long.glb",
+    "label": "Труба большой длинный",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-side": {
+    "url": "./assets/extra/factory_pipe-large-side.glb",
+    "label": "Труба большой side",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large-valve": {
+    "url": "./assets/extra/factory_pipe-large-valve.glb",
+    "label": "Труба большой valve",
+    "category": "Сарай и мастерская"
+  },
+  "factory:pipe-large": {
+    "url": "./assets/extra/factory_pipe-large.glb",
+    "label": "Труба большой",
+    "category": "Сарай и мастерская"
+  },
+  "factory:piston-round": {
+    "url": "./assets/extra/factory_piston-round.glb",
+    "label": "Piston круглое",
+    "category": "Сарай и мастерская"
+  },
+  "factory:piston-square": {
+    "url": "./assets/extra/factory_piston-square.glb",
+    "label": "Piston square",
+    "category": "Сарай и мастерская"
+  },
+  "factory:piston-thin-round": {
+    "url": "./assets/extra/factory_piston-thin-round.glb",
+    "label": "Piston thin круглое",
+    "category": "Сарай и мастерская"
+  },
+  "factory:piston-thin-square": {
+    "url": "./assets/extra/factory_piston-thin-square.glb",
+    "label": "Piston thin square",
+    "category": "Сарай и мастерская"
+  },
+  "factory:robot-arm-a": {
+    "url": "./assets/extra/factory_robot-arm-a.glb",
+    "label": "Робот arm а",
+    "category": "Сарай и мастерская"
+  },
+  "factory:robot-arm-b": {
+    "url": "./assets/extra/factory_robot-arm-b.glb",
+    "label": "Робот arm б",
+    "category": "Сарай и мастерская"
+  },
+  "factory:scanner-high": {
+    "url": "./assets/extra/factory_scanner-high.glb",
+    "label": "Scanner высокий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:scanner-low": {
+    "url": "./assets/extra/factory_scanner-low.glb",
+    "label": "Scanner низкий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-flat": {
+    "url": "./assets/extra/factory_screen-flat.glb",
+    "label": "Screen flat",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-hanging-small": {
+    "url": "./assets/extra/factory_screen-hanging-small.glb",
+    "label": "Screen подвесной маленький",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-hanging-wide": {
+    "url": "./assets/extra/factory_screen-hanging-wide.glb",
+    "label": "Screen подвесной широкий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-panel-flat": {
+    "url": "./assets/extra/factory_screen-panel-flat.glb",
+    "label": "Screen panel flat",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-panel-small": {
+    "url": "./assets/extra/factory_screen-panel-small.glb",
+    "label": "Screen panel маленький",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-panel-wide": {
+    "url": "./assets/extra/factory_screen-panel-wide.glb",
+    "label": "Screen panel широкий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-small": {
+    "url": "./assets/extra/factory_screen-small.glb",
+    "label": "Screen маленький",
+    "category": "Сарай и мастерская"
+  },
+  "factory:screen-wide": {
+    "url": "./assets/extra/factory_screen-wide.glb",
+    "label": "Screen широкий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-corner-inner": {
+    "url": "./assets/extra/factory_structure-corner-inner.glb",
+    "label": "Structure угловая inner",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-corner-outer": {
+    "url": "./assets/extra/factory_structure-corner-outer.glb",
+    "label": "Structure угловая outer",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-doorway-wide": {
+    "url": "./assets/extra/factory_structure-doorway-wide.glb",
+    "label": "Structure doorway широкий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-doorway": {
+    "url": "./assets/extra/factory_structure-doorway.glb",
+    "label": "Structure doorway",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-high": {
+    "url": "./assets/extra/factory_structure-high.glb",
+    "label": "Structure высокий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-medium": {
+    "url": "./assets/extra/factory_structure-medium.glb",
+    "label": "Structure medium",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-short": {
+    "url": "./assets/extra/factory_structure-short.glb",
+    "label": "Structure короткий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-tall": {
+    "url": "./assets/extra/factory_structure-tall.glb",
+    "label": "Structure tall",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-wall": {
+    "url": "./assets/extra/factory_structure-wall.glb",
+    "label": "Structure wall",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-window-wide": {
+    "url": "./assets/extra/factory_structure-window-wide.glb",
+    "label": "Structure window широкий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-window": {
+    "url": "./assets/extra/factory_structure-window.glb",
+    "label": "Structure window",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-yellow-high": {
+    "url": "./assets/extra/factory_structure-yellow-high.glb",
+    "label": "Structure жёлтые высокий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-yellow-medium": {
+    "url": "./assets/extra/factory_structure-yellow-medium.glb",
+    "label": "Structure жёлтые medium",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-yellow-short": {
+    "url": "./assets/extra/factory_structure-yellow-short.glb",
+    "label": "Structure жёлтые короткий",
+    "category": "Сарай и мастерская"
+  },
+  "factory:structure-yellow-tall": {
+    "url": "./assets/extra/factory_structure-yellow-tall.glb",
+    "label": "Structure жёлтые tall",
+    "category": "Сарай и мастерская"
+  },
+  "factory:top-large-checkerboard": {
+    "url": "./assets/extra/factory_top-large-checkerboard.glb",
+    "label": "Top большой checkerboard",
+    "category": "Сарай и мастерская"
+  },
+  "factory:top-large": {
+    "url": "./assets/extra/factory_top-large.glb",
+    "label": "Top большой",
+    "category": "Сарай и мастерская"
+  },
+  "factory:top": {
+    "url": "./assets/extra/factory_top.glb",
+    "label": "Top",
+    "category": "Сарай и мастерская"
+  },
+  "factory:warning-orange": {
+    "url": "./assets/extra/factory_warning-orange.glb",
+    "label": "Предупреждение orange",
+    "category": "Сарай и мастерская"
+  },
+  "factory:warning-traffic": {
+    "url": "./assets/extra/factory_warning-traffic.glb",
+    "label": "Предупреждение дорожный",
+    "category": "Сарай и мастерская"
+  }
+}
