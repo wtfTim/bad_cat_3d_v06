@@ -805,13 +805,33 @@ loadGame();
 for(const [id,action] of [['jump',jump],['swat',()=>chaosAction('knock')],['scratch',()=>chaosAction('scratch')],['tear',()=>chaosAction('tear')],['eat',stealFood],['sleep',goSleep],['meow',meow],['groom',groom],['view',toggleView],['use',questInteract]]){
  document.getElementById(id).addEventListener('pointerdown',e=>{e.preventDefault();action()});
 }
-addEventListener('keydown',e=>{if(editorOn){if(e.key==='Escape'){toggleEditor(false);return;}const key=e.key.toLowerCase();if(['w','a','s','d','q','e','shift','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){keys[key]=true;e.preventDefault();}return;}const key=e.key.toLowerCase();if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(key))e.preventDefault();
- if(!keys[key]){if(e.code==='Space')jump();if(key==='e')chaosAction('knock');if(key==='f')chaosAction('scratch');if(key==='r')chaosAction('tear');
-  if(key==='g'||key==='c'||key==='o')stealFood();if(key==='x')questInteract();if(key==='h')goSleep();if(key==='m')meow();if(key==='u')groom();if(key==='v')toggleView();
-  if(key==='q'){camOrbit=0;camPitch=.15}if(key==='p')saveGame(true);if(key==='b'){collisionVisuals.visible=!collisionVisuals.visible;toast(collisionVisuals.visible?'🟩 Показаны реальные хитбоксы':'🐾 Хитбоксы скрыты')}
- }keys[key]=true;
+// Physical keyboard positions work regardless of RU/EN keyboard layout.
+function gameInputKey(e){
+ const physical={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',KeyQ:'q',KeyE:'e',KeyF:'f',KeyR:'r',KeyG:'g',KeyC:'c',KeyO:'o',KeyX:'x',KeyH:'h',KeyM:'m',KeyU:'u',KeyV:'v',KeyP:'p',KeyB:'b',Space:' ',ShiftLeft:'shift',ShiftRight:'shift',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'};
+ return physical[e.code]??e.key.toLowerCase();
+}
+function isTextEditing(e){const el=e.target;return el?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(el?.tagName)}
+addEventListener('keydown',e=>{
+ if(isTextEditing(e))return;
+ const key=gameInputKey(e);
+ if(editorOn){
+  if(e.code==='Escape'){toggleEditor(false);return}
+  if(['w','a','s','d','q','e','shift','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){keys[key]=true;e.preventDefault()}
+  return;
+ }
+ if([' ','w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key))e.preventDefault();
+ if(!keys[key]){
+  if(key===' ')jump();
+  if(key==='e')chaosAction('knock');if(key==='f')chaosAction('scratch');if(key==='r')chaosAction('tear');
+  if(['g','c','o'].includes(key))stealFood();if(key==='x')questInteract();if(key==='h')goSleep();
+  if(key==='m')meow();if(key==='u')groom();if(key==='v')toggleView();
+  if(key==='q'){camOrbit=0;camPitch=.15}
+  if(key==='p')saveGame(true);
+  if(key==='b'){collisionVisuals.visible=!collisionVisuals.visible;toast(collisionVisuals.visible?'🟩 Показаны реальные хитбоксы':'🐾 Хитбоксы скрыты')}
+ }
+ keys[key]=true;
 });
-addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});addEventListener('blur',()=>{for(const key in keys)keys[key]=false;stick.x=stick.y=0});
+addEventListener('keyup',e=>{keys[gameInputKey(e)]=false});addEventListener('blur',()=>{for(const key in keys)keys[key]=false;stick.x=stick.y=0});
 for(const event of ['contextmenu','selectstart','dragstart'])document.addEventListener(event,e=>e.preventDefault());
 document.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault()},{passive:false});
 const joy=document.getElementById('joy'),nub=document.getElementById('nub');let joyPointer=null;
