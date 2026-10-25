@@ -1,0 +1,8 @@
+# New third-party model packs are installed locally under their own licenses
+/assets/extra/
+/assets/extra_catalog.json
+# Original downloaded archives and installer contents
+/*.zip
+/install_packs.py
+/extra_catalog.json
+__pycache__/
