@@ -453,153 +453,7 @@ function estateBuilding(b){
 }
 for(const b of estateBuildings)estateBuilding(b);
 
-// Architectural editor stores modifications separately: furniture JSON is untouched.
-const WALL_SAVE_KEY='badcat3d-walls-v1';
-const wallEdits=new Map(),wallRecords=new Map();
-let wallMode=false,selectedWall=null,wallHelper=null;
-let wallStored={};try{wallStored=JSON.parse(localStorage.getItem(WALL_SAVE_KEY)||'{}')||{}}catch(e){wallStored={}}
-const wallMat=material('#efe1c8');
-const wallField=(id)=>document.getElementById('edWall'+id);
-function saveEditedWalls(){
- const changes={};for(const [id,record] of wallEdits)changes[id]=record;
- localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(changes));
-}
-function wallRemoveParts(record){
- for(const mesh of record.parts||[]){
-  const ix=wallMeshes.indexOf(mesh);if(ix>=0)wallMeshes.splice(ix,1);
-  house.remove(mesh);mesh.geometry.dispose();
- }
- for(const collider of record.boxes||[]){
-  const ix=colliders.indexOf(collider);if(ix>=0)colliders.splice(ix,1);
- }
- record.parts=[];record.boxes=[];
-}
-function wallRebuild(record){
- wallRemoveParts(record);
- const id=record.id,base=architecturalWallRecords.find(x=>x.id===id);
- if(base){
-  if(base.originalMesh.parent)base.originalMesh.parent.remove(base.originalMesh);
-  const m=wallMeshes.indexOf(base.originalMesh);if(m>=0)wallMeshes.splice(m,1);
-  const c=colliders.indexOf(base.originalCollider);if(c>=0)colliders.splice(c,1);
- }
- const d=record.data;
- if(record.deleted)return;
- const length=Math.max(.4,Math.min(30,d.length)),height=Math.max(.4,Math.min(9,d.height)),thick=Math.max(.08,Math.min(1.2,d.thickness));
- // Build actual empty door/window openings from up to four solid wall segments.
- const segments=[],cutW=Math.min(length-.12,Math.max(.4,d.openingWidth||1.2));
- let low=0,high=0;
- if(d.opening==='door'){low=0;high=Math.min(height-.08,Math.max(.3,d.openingHeight||2.2));}
- if(d.opening==='window'){low=Math.min(height-.35,Math.max(.15,d.sill||1));high=Math.min(height-.08,low+Math.max(.3,d.openingHeight||1.2));}
- if(d.opening==='none')segments.push([0,length,0,height]);
- else{
-  const side=(length-cutW)/2;
-  if(side>.001){segments.push([-length/2+side/2,side,0,height],[length/2-side/2,side,0,height]);}
-  if(low>.02)segments.push([0,cutW,0,low]);
-  if(high<height-.02)segments.push([0,cutW,high,height]);
- }
- const rot=((Math.round(d.rotation/(Math.PI/2))%4)+4)%4*Math.PI/2;
- for(const [localX,segW,y0,y1] of segments){
-  if(segW<=.005||y1-y0<=.005)continue;
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(segW,y1-y0,thick),base?.originalMesh.material||wallMat);
-  mesh.position.set(d.x+Math.cos(rot)*localX,d.y+(y0+y1)/2,d.z-Math.sin(rot)*localX);
-  mesh.rotation.y=rot;
-  mesh.userData.wallEditId=id;house.add(mesh);wallMeshes.push(mesh);record.parts.push(mesh);
-  mesh.updateMatrixWorld(true);
-  const bb=new THREE.Box3().setFromObject(mesh);
-  const box={x1:bb.min.x,x2:bb.max.x,y1:bb.min.y,y2:bb.max.y,z1:bb.min.z,z2:bb.max.z,source:'wall'};
-  colliders.push(box);record.boxes.push(box);
- }
- if(wallHelper&&selectedWall===record){wallHelper.setFromObject(record.parts[0]||record.originalMesh);wallHelper.update();}
-}
-function wallRegister(id,data){
- const base=architecturalWallRecords.find(x=>x.id===id);
- const record={id,data:{...(base?base.base:{}),...data},parts:[],boxes:[],deleted:false};
- wallRecords.set(id,record);
- wallEdits.set(id,record.data);
- wallRebuild(record);
- return record;
-}
-function wallEnsureBase(id){
- if(wallRecords.has(id))return wallRecords.get(id);
- const base=architecturalWallRecords.find(x=>x.id===id);if(!base)return null;
- return wallRegister(id,{...base.base});
-}
-function wallRestoreAll(){
- for(const [id,data] of Object.entries(wallStored)){
-  if(!data||typeof data!=='object')continue;
-  if(id.startsWith('original-')&&!architecturalWallRecords.some(x=>x.id===id))continue;
-  const record=wallRegister(id,{x:Number(data.x)||0,z:Number(data.z)||0,y:Number(data.y)||0,length:Number(data.length)||3,height:Number(data.height)||2.7,thickness:Number(data.thickness)||.2,rotation:Number(data.rotation)||0,opening:['door','window'].includes(data.opening)?data.opening:'none',openingWidth:Number(data.openingWidth)||1.2,openingHeight:Number(data.openingHeight)||2.2,sill:Number(data.sill)||1});
-  if(data.deleted){record.deleted=true;wallRebuild(record)}
- }
-}
-function wallPick(record){
- selectedWall=record;
- if(wallHelper){scene.remove(wallHelper);wallHelper.geometry.dispose();wallHelper.material.dispose();wallHelper=null}
- const label=wallField('Selected');
- if(!record){label.textContent='Выбери стену или добавь новую';return}
- label.textContent=(record.id.startsWith('original-')?'🏠 Стена здания':'🧱 Новая стена')+' · '+record.id;
- for(const [key,field] of [['length','Length'],['height','Height'],['thickness','Thickness'],['opening','Opening'],['openingWidth','OpeningWidth'],['openingHeight','OpeningHeight'],['sill','Sill']]){
-  wallField(field).value=record.data[key];
- }
- if(record.parts.length){wallHelper=new THREE.BoxHelper(record.parts[0],0xffc538);scene.add(wallHelper)}
- else if(architecturalWallRecords.some(x=>x.id===record.id)){const base=architecturalWallRecords.find(x=>x.id===record.id);wallHelper=new THREE.BoxHelper(base.originalMesh,0xffc538);scene.add(wallHelper)}
-}
-function wallSelectFromPointer(event){
- editRay(event);
- const objects=wallMeshes.slice();
- const hit=editHits.intersectObjects(objects,false)[0];
- if(!hit){wallPick(null);return}
- const id=hit.object.userData.wallEditId;
- wallPick(id?wallEnsureBase(id):null);
-}
-function wallApplyChanges(update){
- if(!selectedWall)return toast('🧱 Сначала выбери стену');
- const d=selectedWall.data;
- Object.assign(d,update);
- wallRebuild(selectedWall);wallEdits.set(selectedWall.id,{...d,deleted:selectedWall.deleted});saveEditedWalls();wallPick(selectedWall);
-}
-function switchEditorMode(isWalls){
- wallMode=isWalls;
- wallField('Tools').style.display=isWalls?'block':'none';
- document.getElementById('edFurnitureTools').style.display=isWalls?'none':'block';
- if(isWalls)pickEdit(null);else wallPick(null);
-}
-document.getElementById('edModeFurniture').onclick=()=>switchEditorMode(false);
-document.getElementById('edModeWalls').onclick=()=>switchEditorMode(true);
-wallField('Add').onclick=()=>{
- camera.updateMatrixWorld(true);
- const dir=new THREE.Vector3();camera.getWorldDirection(dir);dir.y=0;
- if(dir.lengthSq()<.001)dir.set(0,0,1);dir.normalize();
- const x=camera.position.x+dir.x*3,z=camera.position.z+dir.z*3;
- let y=0;for(const surface of walkableSurfaces)if(surface.architecture&&x>=surface.x1&&x<=surface.x2&&z>=surface.z1&&z<=surface.z2&&surface.y<=camera.position.y+.15)y=Math.max(y,surface.y);
- const id='built-'+Date.now().toString(36)+'-'+Math.floor(Math.random()*10000);
- const data={x,z,y,length:3,height:2.7,thickness:.2,rotation:Math.abs(dir.x)>Math.abs(dir.z)?Math.PI/2:0,opening:'none',openingWidth:1.2,openingHeight:2.2,sill:1};
- const record=wallRegister(id,data);saveEditedWalls();wallPick(record);toast('🧱 Стена добавлена! Настрой размер и проём.');
-};
-wallField('Apply').onclick=()=>{
- if(!selectedWall)return toast('🧱 Сначала выбери стену');
- const value=(field,min,max)=>THREE.MathUtils.clamp(Number(wallField(field).value)||min,min,max);
- wallApplyChanges({length:value('Length',.4,30),height:value('Height',.4,9),thickness:value('Thickness',.08,1.2),opening:wallField('Opening').value,openingWidth:value('OpeningWidth',.4,12),openingHeight:value('OpeningHeight',.3,6),sill:value('Sill',0,6)});
-};
-wallField('Rotate').onclick=()=>{if(selectedWall)wallApplyChanges({rotation:selectedWall.data.rotation+Math.PI/2})};
-for(const [button,dx,dz,dy] of [['Left',-.2,0,0],['Right',.2,0,0],['Forward',0,.2,0],['Back',0,-.2,0],['Up',0,0,.05],['Down',0,0,-.05]]){
- wallField(button).onclick=()=>{
-  if(!selectedWall)return;
-  const right=new THREE.Vector3(-Math.cos(editCamYaw),0,Math.sin(editCamYaw)),forward=new THREE.Vector3(Math.sin(editCamYaw),0,Math.cos(editCamYaw));
-  wallApplyChanges({x:selectedWall.data.x+dx*right.x+dz*forward.x,z:selectedWall.data.z+dx*right.z+dz*forward.z,y:Math.max(0,selectedWall.data.y+dy)});
- };
-}
-wallField('Reset').onclick=()=>{
- if(!selectedWall)return;
- const id=selectedWall.id,base=architecturalWallRecords.find(x=>x.id===id);
- if(!confirm(base?'Вернуть исходную стену и убрать созданные проёмы?':'Удалить добавленную стену?'))return;
- wallRemoveParts(selectedWall);
- if(base){base.originalMesh.parent||house.add(base.originalMesh);if(!wallMeshes.includes(base.originalMesh))wallMeshes.push(base.originalMesh);if(!colliders.includes(base.originalCollider))colliders.push(base.originalCollider);}
- wallEdits.delete(id);wallRecords.delete(id);wallPick(null);saveEditedWalls();
-};
-wallField('Save').onclick=()=>{saveEditedWalls();toast('💾 Стены сохранены отдельно от мебели')};
 
-wallRestoreAll();
 // Furnish the actual estate outbuildings from the existing Tiny Living pack.
 // Positions are inside their accessible doorways; furniture stays editable.
 const estateInteriorLayout=[];
@@ -775,6 +629,153 @@ async function previewCatalog(){const key=catalog.value,token=++previewToken;if(
 refreshCatalog();
 let editCamTarget=new THREE.Vector3(0,1.4,0),editCamYaw=.6,editCamPitch=.55,editCamDistance=14,editCameraMode=false,editDragMode=null,editLastX=0,editLastY=0;
 let editorOn=false,editSelected=null,editHelper=null,editPointer=null,editPlane=new THREE.Plane(),editOffset=new THREE.Vector3(),editHits=new THREE.Raycaster();
+// Architectural editor stores modifications separately: furniture JSON is untouched.
+const WALL_SAVE_KEY='badcat3d-walls-v1';
+const wallEdits=new Map(),wallRecords=new Map();
+let wallMode=false,selectedWall=null,wallHelper=null;
+let wallStored={};try{wallStored=JSON.parse(localStorage.getItem(WALL_SAVE_KEY)||'{}')||{}}catch(e){wallStored={}}
+const wallMat=material('#efe1c8');
+const wallField=(id)=>document.getElementById('edWall'+id);
+function saveEditedWalls(){
+ const changes={};for(const [id,record] of wallEdits)changes[id]=record;
+ localStorage.setItem(WALL_SAVE_KEY,JSON.stringify(changes));
+}
+function wallRemoveParts(record){
+ for(const mesh of record.parts||[]){
+  const ix=wallMeshes.indexOf(mesh);if(ix>=0)wallMeshes.splice(ix,1);
+  house.remove(mesh);mesh.geometry.dispose();
+ }
+ for(const collider of record.boxes||[]){
+  const ix=colliders.indexOf(collider);if(ix>=0)colliders.splice(ix,1);
+ }
+ record.parts=[];record.boxes=[];
+}
+function wallRebuild(record){
+ wallRemoveParts(record);
+ const id=record.id,base=architecturalWallRecords.find(x=>x.id===id);
+ if(base){
+  if(base.originalMesh.parent)base.originalMesh.parent.remove(base.originalMesh);
+  const m=wallMeshes.indexOf(base.originalMesh);if(m>=0)wallMeshes.splice(m,1);
+  const c=colliders.indexOf(base.originalCollider);if(c>=0)colliders.splice(c,1);
+ }
+ const d=record.data;
+ if(record.deleted)return;
+ const length=Math.max(.4,Math.min(30,d.length)),height=Math.max(.4,Math.min(9,d.height)),thick=Math.max(.08,Math.min(1.2,d.thickness));
+ // Build actual empty door/window openings from up to four solid wall segments.
+ const segments=[],cutW=Math.min(length-.12,Math.max(.4,d.openingWidth||1.2));
+ let low=0,high=0;
+ if(d.opening==='door'){low=0;high=Math.min(height-.08,Math.max(.3,d.openingHeight||2.2));}
+ if(d.opening==='window'){low=Math.min(height-.35,Math.max(.15,d.sill||1));high=Math.min(height-.08,low+Math.max(.3,d.openingHeight||1.2));}
+ if(d.opening==='none')segments.push([0,length,0,height]);
+ else{
+  const side=(length-cutW)/2;
+  if(side>.001){segments.push([-length/2+side/2,side,0,height],[length/2-side/2,side,0,height]);}
+  if(low>.02)segments.push([0,cutW,0,low]);
+  if(high<height-.02)segments.push([0,cutW,high,height]);
+ }
+ const rot=((Math.round(d.rotation/(Math.PI/2))%4)+4)%4*Math.PI/2;
+ for(const [localX,segW,y0,y1] of segments){
+  if(segW<=.005||y1-y0<=.005)continue;
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(segW,y1-y0,thick),base?.originalMesh.material||wallMat);
+  mesh.position.set(d.x+Math.cos(rot)*localX,d.y+(y0+y1)/2,d.z-Math.sin(rot)*localX);
+  mesh.rotation.y=rot;
+  mesh.userData.wallEditId=id;house.add(mesh);wallMeshes.push(mesh);record.parts.push(mesh);
+  mesh.updateMatrixWorld(true);
+  const bb=new THREE.Box3().setFromObject(mesh);
+  const box={x1:bb.min.x,x2:bb.max.x,y1:bb.min.y,y2:bb.max.y,z1:bb.min.z,z2:bb.max.z,source:'wall'};
+  colliders.push(box);record.boxes.push(box);
+ }
+ if(wallHelper&&selectedWall===record){wallHelper.setFromObject(record.parts[0]||record.originalMesh);wallHelper.update();}
+}
+function wallRegister(id,data){
+ const base=architecturalWallRecords.find(x=>x.id===id);
+ const record={id,data:{...(base?base.base:{}),...data},parts:[],boxes:[],deleted:false};
+ wallRecords.set(id,record);
+ wallEdits.set(id,record.data);
+ wallRebuild(record);
+ return record;
+}
+function wallEnsureBase(id){
+ if(wallRecords.has(id))return wallRecords.get(id);
+ const base=architecturalWallRecords.find(x=>x.id===id);if(!base)return null;
+ return wallRegister(id,{...base.base});
+}
+function wallRestoreAll(){
+ for(const [id,data] of Object.entries(wallStored)){
+  if(!data||typeof data!=='object')continue;
+  if(id.startsWith('original-')&&!architecturalWallRecords.some(x=>x.id===id))continue;
+  const record=wallRegister(id,{x:Number(data.x)||0,z:Number(data.z)||0,y:Number(data.y)||0,length:Number(data.length)||3,height:Number(data.height)||2.7,thickness:Number(data.thickness)||.2,rotation:Number(data.rotation)||0,opening:['door','window'].includes(data.opening)?data.opening:'none',openingWidth:Number(data.openingWidth)||1.2,openingHeight:Number(data.openingHeight)||2.2,sill:Number(data.sill)||1});
+  if(data.deleted){record.deleted=true;wallRebuild(record)}
+ }
+}
+function wallPick(record){
+ selectedWall=record;
+ if(wallHelper){scene.remove(wallHelper);wallHelper.geometry.dispose();wallHelper.material.dispose();wallHelper=null}
+ const label=wallField('Selected');
+ if(!record){label.textContent='Выбери стену или добавь новую';return}
+ label.textContent=(record.id.startsWith('original-')?'🏠 Стена здания':'🧱 Новая стена')+' · '+record.id;
+ for(const [key,field] of [['length','Length'],['height','Height'],['thickness','Thickness'],['opening','Opening'],['openingWidth','OpeningWidth'],['openingHeight','OpeningHeight'],['sill','Sill']]){
+  wallField(field).value=record.data[key];
+ }
+ if(record.parts.length){wallHelper=new THREE.BoxHelper(record.parts[0],0xffc538);scene.add(wallHelper)}
+ else if(architecturalWallRecords.some(x=>x.id===record.id)){const base=architecturalWallRecords.find(x=>x.id===record.id);wallHelper=new THREE.BoxHelper(base.originalMesh,0xffc538);scene.add(wallHelper)}
+}
+function wallSelectFromPointer(event){
+ editRay(event);
+ const objects=wallMeshes.slice();
+ const hit=editHits.intersectObjects(objects,false)[0];
+ if(!hit){wallPick(null);return}
+ const id=hit.object.userData.wallEditId;
+ wallPick(id?wallEnsureBase(id):null);
+}
+function wallApplyChanges(update){
+ if(!selectedWall)return toast('🧱 Сначала выбери стену');
+ const d=selectedWall.data;
+ Object.assign(d,update);
+ wallRebuild(selectedWall);wallEdits.set(selectedWall.id,{...d,deleted:selectedWall.deleted});saveEditedWalls();wallPick(selectedWall);
+}
+function switchEditorMode(isWalls){
+ wallMode=isWalls;
+ wallField('Tools').style.display=isWalls?'block':'none';
+ document.getElementById('edFurnitureTools').style.display=isWalls?'none':'block';
+ if(isWalls)pickEdit(null);else wallPick(null);
+}
+document.getElementById('edModeFurniture').onclick=()=>switchEditorMode(false);
+document.getElementById('edModeWalls').onclick=()=>switchEditorMode(true);
+wallField('Add').onclick=()=>{
+ camera.updateMatrixWorld(true);
+ const dir=new THREE.Vector3();camera.getWorldDirection(dir);dir.y=0;
+ if(dir.lengthSq()<.001)dir.set(0,0,1);dir.normalize();
+ const x=camera.position.x+dir.x*3,z=camera.position.z+dir.z*3;
+ let y=0;for(const surface of walkableSurfaces)if(surface.architecture&&x>=surface.x1&&x<=surface.x2&&z>=surface.z1&&z<=surface.z2&&surface.y<=camera.position.y+.15)y=Math.max(y,surface.y);
+ const id='built-'+Date.now().toString(36)+'-'+Math.floor(Math.random()*10000);
+ const data={x,z,y,length:3,height:2.7,thickness:.2,rotation:Math.abs(dir.x)>Math.abs(dir.z)?Math.PI/2:0,opening:'none',openingWidth:1.2,openingHeight:2.2,sill:1};
+ const record=wallRegister(id,data);saveEditedWalls();wallPick(record);toast('🧱 Стена добавлена! Настрой размер и проём.');
+};
+wallField('Apply').onclick=()=>{
+ if(!selectedWall)return toast('🧱 Сначала выбери стену');
+ const value=(field,min,max)=>THREE.MathUtils.clamp(Number(wallField(field).value)||min,min,max);
+ wallApplyChanges({length:value('Length',.4,30),height:value('Height',.4,9),thickness:value('Thickness',.08,1.2),opening:wallField('Opening').value,openingWidth:value('OpeningWidth',.4,12),openingHeight:value('OpeningHeight',.3,6),sill:value('Sill',0,6)});
+};
+wallField('Rotate').onclick=()=>{if(selectedWall)wallApplyChanges({rotation:selectedWall.data.rotation+Math.PI/2})};
+for(const [button,dx,dz,dy] of [['Left',-.2,0,0],['Right',.2,0,0],['Forward',0,.2,0],['Back',0,-.2,0],['Up',0,0,.05],['Down',0,0,-.05]]){
+ wallField(button).onclick=()=>{
+  if(!selectedWall)return;
+  const right=new THREE.Vector3(-Math.cos(editCamYaw),0,Math.sin(editCamYaw)),forward=new THREE.Vector3(Math.sin(editCamYaw),0,Math.cos(editCamYaw));
+  wallApplyChanges({x:selectedWall.data.x+dx*right.x+dz*forward.x,z:selectedWall.data.z+dx*right.z+dz*forward.z,y:Math.max(0,selectedWall.data.y+dy)});
+ };
+}
+wallField('Reset').onclick=()=>{
+ if(!selectedWall)return;
+ const id=selectedWall.id,base=architecturalWallRecords.find(x=>x.id===id);
+ if(!confirm(base?'Вернуть исходную стену и убрать созданные проёмы?':'Удалить добавленную стену?'))return;
+ wallRemoveParts(selectedWall);
+ if(base){base.originalMesh.parent||house.add(base.originalMesh);if(!wallMeshes.includes(base.originalMesh))wallMeshes.push(base.originalMesh);if(!colliders.includes(base.originalCollider))colliders.push(base.originalCollider);}
+ wallEdits.delete(id);wallRecords.delete(id);wallPick(null);saveEditedWalls();
+};
+wallField('Save').onclick=()=>{saveEditedWalls();toast('💾 Стены сохранены отдельно от мебели')};
+
+wallRestoreAll();
 function syncEditorLabel(){document.getElementById('edSelected').textContent=editSelected?`${editSelected.description} · X ${editSelected.holder.position.x.toFixed(1)} · Z ${editSelected.holder.position.z.toFixed(1)} · Y ${editSelected.holder.position.y.toFixed(2)} · Размер ${Math.round(editSelected.holder.scale.x*100)}%`:'Нажми на любую мебель в сцене';}
 function pickEdit(item){editSelected=item;if(editHelper){scene.remove(editHelper);editHelper.geometry.dispose();editHelper.material.dispose();editHelper=null;}if(item){editHelper=new THREE.BoxHelper(item.holder,0xffd543);scene.add(editHelper)}syncEditorLabel();}
 function toggleEditor(force){editorOn=typeof force==='boolean'?force:!editorOn;editorPanel.style.display=editorOn?'block':'none';editorButton.textContent=editorOn?'✅ Закончить':'🛠️ Мебель';if(!editorOn){pickEdit(null);wallPick(null);editPointer=null;saveFurniture();saveEditedWalls();}else{// Free camera starts at its current independent world pose, never attached to the cat.
