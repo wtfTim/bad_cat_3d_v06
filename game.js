@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
+import {STORY_QUESTS,STORY_PLACES} from './quests_story.js?v=1';
 
 // BAD CAT 3D v1.7: the only collision sources are architectural walls and the
 // furniture models actually loaded into the scene. Old invisible furniture is gone.
@@ -245,44 +246,99 @@ function toast(text){HUD.message.textContent=text;HUD.message.style.opacity='1';
 function setProgress(){HUD.score.textContent=score;HUD.count.textContent=chaos;HUD.hunger.textContent=Math.round(hunger);HUD.energy.textContent=Math.round(energy);HUD.alert.textContent=alertness>55?'ПОГОНЯ!':alertness>20?'Ищет котика':'Спокойно';HUD.mood.textContent=mood>60?'Довольный 😺':mood>25?'Скучает 😿':'Грустный 🙀'}
 // The neighborhood story: progress is persistent and every mission has a real place.
 let streetKnocks=0,dugTreasure=false,buriedFish=false,boughtMilk=false,bathed=false,gnomeSaved=false,dugBone=false,buriedBone=false,neighborSlept=false,parkScratched=false,marketFood=false;
-let gardenBench=false,gardenTrail=false,gardenClue=false,garageSearched=false,shedSearched=false,greenhouseSearched=false,saunaVisited=false,storyFinished=false;
-const nearQuest=(x,z,d=4)=>Math.hypot(cat.position.x-x,cat.position.z-z)<d;
+// 110 connected detective quests. Real-world park sites come from the approved estate.
+const quests=STORY_QUESTS;
+const storyInventory=new Set(),storyJournal=[];
+let storyDialogOpen=false;
+const storyPopup=document.createElement('div');
+storyPopup.id='storyPopup';
+storyPopup.style.cssText='display:none;position:fixed;inset:0;z-index:7000;background:#151523c9;align-items:center;justify-content:center;padding:14px;box-sizing:border-box';
+const storyPanel=document.createElement('section');
+storyPanel.style.cssText='width:min(510px,100%);max-height:85dvh;overflow:auto;background:#fff9ec;color:#372e39;border:4px solid #e6b178;border-radius:20px;padding:23px 21px;box-shadow:0 20px 60px #0009;font:16px/1.55 system-ui';
+const storyTitle=document.createElement('h2');storyTitle.style.cssText='font-size:23px;margin:0 0 12px;color:#65445c';
+const storyText=document.createElement('div');storyText.style.cssText='white-space:pre-line;margin-bottom:17px';
+const storyButtons=document.createElement('div');storyButtons.style.cssText='display:grid;gap:8px';
+storyPanel.append(storyTitle,storyText,storyButtons);storyPopup.append(storyPanel);document.body.append(storyPopup);
+function nearQuest(x,z,d=3.8){return Math.hypot(cat.position.x-x,cat.position.z-z)<d}
 function nearestFridge(){
- const f=[...editablePieces.values()].filter(p=>!p.removed&&p.holder.visible&&/fridge|refrigerator|холодильник/i.test(p.model+' '+p.description));
- f.sort((a,b)=>Math.hypot(cat.position.x-a.holder.position.x,cat.position.z-a.holder.position.z)-Math.hypot(cat.position.x-b.holder.position.x,cat.position.z-b.holder.position.z));
- return f[0]||null;
+ const rows=[...editablePieces.values()].filter(p=>!p.removed&&p.holder.visible&&/fridge|refrigerator|холодильник/i.test(p.model+' '+p.description));
+ rows.sort((a,b)=>Math.hypot(cat.position.x-a.holder.position.x,cat.position.z-a.holder.position.z)-Math.hypot(cat.position.x-b.holder.position.x,cat.position.z-b.holder.position.z));
+ return rows[0]||null;
 }
-const quests=[
- {id:'porch',text:'Выйди из дома и осмотри двор',at:[3,13],done:()=>nearQuest(3,13,4)},
- {id:'trail',text:'Пройди по дорожке нового сада',at:[2,22],done:()=>nearQuest(2,22,5)},
- {id:'bench',text:'Найди записку под садовой скамейкой (X)',at:[-9.5,16],done:()=>gardenBench},
- {id:'tracks',text:'Ищи кошачьи следы у деревьев (X)',at:[-20,27],done:()=>gardenTrail},
- {id:'map',text:'Найди тайную карту возле беседки (X)',at:[-20,27],done:()=>gardenClue},
- {id:'eat',text:'Подкрепись у своего холодильника (G / ЕШЬ)',at:[-9.5,-7.5],done:()=>ate},
- {id:'shed',text:'Найди лопатку в сарае (X)',at:[-42,-31],done:()=>shedSearched},
- {id:'garage',text:'Проверь инструменты в гараже (X)',at:[38,-34],done:()=>garageSearched},
- {id:'greenhouse',text:'Ищи улику в теплице (X)',at:[-40,36],done:()=>greenhouseSearched},
- {id:'treasure',text:'Откопай спрятанный клад (X)',at:[-37,43],done:()=>dugTreasure},
- {id:'gnome',text:'Помоги садовому гному (X)',at:[-50,43],done:()=>gnomeSaved},
- {id:'evidence',text:'Закопай рыбные улики (X)',at:[-16,48],done:()=>buriedFish},
- {id:'sauna',text:'Передохни возле бани (X)',at:[40,35],done:()=>saunaVisited},
- {id:'fountain',text:'Освежись у фонтана (X)',at:[34,8],done:()=>bathed},
- {id:'bone',text:'Откопай древнюю косточку (X)',at:[-55,-47],done:()=>dugBone},
- {id:'bury',text:'Спрячь косточку у изгороди (X)',at:[51,48],done:()=>buriedBone},
- {id:'sleep',text:'Вернись домой и выспись (H / СПАТЬ)',at:[-7,5],done:()=>slept},
- {id:'scratch',text:'Оставь кошачью метку на мебели (F)',at:[0,5],done:()=>scratched},
- {id:'home',text:'Вернись в свой сад с сокровищем',at:[2,22],done:()=>nearQuest(2,22,5)},
- {id:'victory',text:'Мяукни у крыльца в честь победы (M)',at:[3,13],done:()=>storyFinished}
-];
-function questTarget(q){const f=q?.id==='eat'?nearestFridge():null;return f?[f.holder.position.x,f.holder.position.z]:q?.at}
+function questTarget(q){
+ if(!q)return null;
+ if(q.site==='fridge'){const f=nearestFridge();if(f)return [f.holder.position.x,f.holder.position.z]}
+ return q.at;
+}
+function showStoryDialog(title,body,choices=['Продолжить'],onPick=null){
+ storyTitle.textContent=title;storyText.textContent=body;storyButtons.replaceChildren();
+ for(let i=0;i<choices.length;i++){
+  const button=document.createElement('button');button.textContent=choices[i];
+  button.style.cssText='background:#74536a;color:white;border:0;border-radius:11px;padding:12px 15px;font:700 15px system-ui;text-align:left;cursor:pointer;min-height:45px';
+  button.addEventListener('click',()=>{
+   if(onPick&&onPick(i)===false)return;
+   storyPopup.style.display='none';storyDialogOpen=false;
+  });
+  storyButtons.append(button);
+ }
+ storyPopup.style.display='flex';storyDialogOpen=true;
+}
+function storyAdvance(q){
+ if(!q||quests[questIndex]?.id!==q.id)return;
+ storyInventory.add(q.id);storyJournal.push({title:q.title,body:q.story});
+ if(storyJournal.length>180)storyJournal.shift();
+ questIndex++;score+=5;energy=Math.min(100,energy+2);
+ if(questIndex===quests.length){score+=100;toast('🏆 Тайна Мартина раскрыта! +100 🐟')}
+ else toast('🐾 Новая улика! +5 🐟');
+ setProgress();updateQuest();saveGame();
+}
 function updateQuest(){
- let passed=0;
- while(questIndex<quests.length&&quests[questIndex].done()){questIndex++;passed++;score+=7;energy=Math.min(100,energy+5)}
- if(passed)toast('🏆 Новая глава пройдена! +'+(passed*7)+' 🐟');
- const q=quests[questIndex],at=questTarget(q);
- HUD.quest.textContent=q?`${questIndex+1}/${quests.length} · ${q.text}`:'🏆 Всё приключение пройдено!';
- const t=document.getElementById('questDistance');
- if(t)t.textContent=q?`📍 ${Math.round(Math.hypot(cat.position.x-at[0],cat.position.z-at[1]))} м до цели · X — действие`:'🎉 Тайна сада раскрыта!';
+ const q=quests[questIndex],label=document.getElementById('questDistance');
+ if(!q){HUD.quest.textContent='🏆 Расследование завершено · 110/110';if(label)label.textContent='Искра обрела друга. Исследуй усадьбу!';return}
+ HUD.quest.textContent=`${questIndex+1}/${quests.length} · ${q.title}`;
+ if(label)label.textContent=`📓 Глава ${q.chapter}/10 · ${q.chapterName} · ${q.kind==='search'?'Без точной метки':q.kind==='choice'?'Разгадай шифр':q.kind==='talk'?'Диалог':'Следуй подсказке'}`;
+}
+function detectiveAction(kind){
+ const q=quests[questIndex];if(!playing||storyDialogOpen||!q||q.kind!==kind)return false;
+ const at=questTarget(q);if(!nearQuest(at[0],at[1],5)){toast('🧭 Сначала подойди к месту из дневника');return false}
+ storyAdvance(q);showStoryDialog(q.title,q.story);return true;
+}
+function questInteract(){
+ if(!playing||storyDialogOpen)return;
+ const q=quests[questIndex];if(!q){showStoryDialog('🐈 История завершена','Теперь ты можешь свободно исследовать парк с Искрой!');return}
+ if(q.kind==='eat'){stealFood();return}
+ if(q.kind==='move'){toast('🧭 Иди в указанный район и внимательно смотри по сторонам');return}
+ if(q.kind==='meow'){toast('🐾 Мяукни возле указанного места');return}
+ if(q.kind==='search'){
+  for(const site of q.options||[]){
+   const at=STORY_PLACES[site];
+   if(at&&nearQuest(at[0],at[1],3.2)){
+    if(site!==q.site){showStoryDialog('Ложный след','Здесь ничего нет, кроме влажной земли. Прочитай записку ещё раз и проверь следующий камень.');return}
+    storyAdvance(q);showStoryDialog('🔎 Улика обнаружена',q.story);return;
+   }
+  }
+  toast('🔍 Камни разбросаны по парку. Осмотри их и найди правильный.');return;
+ }
+ const at=questTarget(q);
+ if(!nearQuest(at[0],at[1],q.site==='stray'?4.7:4.3)){toast('🧭 Подойди ближе и нажми ДЕЙСТВИЕ');return}
+ if(q.kind==='choice'||q.kind==='talk'){
+  showStoryDialog(q.kind==='talk'?'🐈 Искра: '+q.title:'🧩 Загадка: '+q.title,q.story,q.options||['Продолжить'],i=>{
+   if(i!==q.answer){toast(q.kind==='talk'?'🐈 Искра сомневается. Подумай над ответом.':'❌ Неверно. Сверь подсказки в дневнике.');return false}
+   storyAdvance(q);return true;
+  });
+ }else{storyAdvance(q);showStoryDialog(q.kind==='note'?'📜 Найдена записка':'🔎 Найдена улика',q.story)}
+}
+function storyFrame(){
+ if(!playing||storyDialogOpen)return;
+ const q=quests[questIndex];
+ if(q?.kind==='move'){const at=questTarget(q);if(at&&nearQuest(at[0],at[1],4.5)){
+  storyAdvance(q);if(questIndex===1||questIndex%11===0)showStoryDialog('🐾 Глава '+q.chapter,q.story);
+ }}
+}
+function showStoryJournal(){
+ const q=quests[questIndex];
+ const lines=storyJournal.slice(-15).reverse().map(e=>'• '+e.title+'\n'+e.body);
+ showStoryDialog('📓 Дневник расследования',(q?'Текущая задача: '+q.title+'\n\n':'')+(lines.length?lines.join('\n\n'):'Улик пока нет. Найди первую записку в парке.'));
 }
 function floorOf(y){return y>F-1.1?F:0}
 function isBlocked(x,z,feet,r=CAT_RADIUS,height=.70,sourceFilter=null){
@@ -1512,7 +1568,7 @@ function stealFood(){if(!playing)return;
  if(elapsed-lastMeal<12){toast('🐟 Котик сыт, попробуй чуть позже');return}
  lastMeal=elapsed;hunger=Math.min(100,hunger+38);mood=Math.min(100,mood+8);
  ate=true;score+=4;alertness=Math.min(100,alertness+9);sound('eat');
- toast('🐟 Нашёл еду в холодильнике! +4 🐟');updateQuest();setProgress();
+ toast('🐟 Нашёл еду в холодильнике! +4 🐟');detectiveAction('eat');setProgress();
 }
 function goSleep(){if(!playing)return;
  const beds=[...editablePieces.values()].filter(p=>!p.removed&&p.holder.visible&&/bed|кровать/i.test(p.model+' '+p.description));
@@ -1520,40 +1576,8 @@ function goSleep(){if(!playing)return;
  if(!nearby){toast('💤 Подойди к одной из своих кроватей');return}
  sleeping=4;energy=100;mood=Math.min(100,mood+12);slept=true;sound('sleep');toast('💤 Мурр... котик отдыхает');updateQuest();
 }
-function questInteract(){
- if(!playing)return;
- const q=quests[questIndex];
- if(!q){toast('🏆 Тайна сада раскрыта! Исследуй усадьбу дальше.');return}
- if(q.id==='eat'){stealFood();return}
- const targets={bench:4.3,tracks:6,map:6,shed:7,garage:8,greenhouse:8,treasure:5,gnome:5,
-  evidence:5,sauna:8,fountain:8,bone:6,bury:6};
- if(!targets[q.id]){
-  toast('🐾 Для этого задания следуй подсказке: '+q.text);return;
- }
- if(!nearQuest(q.at[0],q.at[1],targets[q.id])){
-  toast('🧭 Подойди ближе к метке текущего задания');return;
- }
- switch(q.id){
- case 'bench': gardenBench=true;toast('🪑 Под лавкой записка: «Следы ведут к деревьям…»');break;
- case 'tracks':gardenTrail=true;toast('🐾 У деревьев найдены загадочные следы');break;
- case 'map':gardenClue=true;toast('🗺️ У беседки карта: сарай → гараж → теплица → клад!');break;
- case 'shed':shedSearched=true;toast('🧰 В сарае нашлась лопатка для раскопок');break;
- case 'garage':garageSearched=true;toast('🔧 В гараже найден шифр к тайнику');break;
- case 'greenhouse':greenhouseSearched=true;toast('🌱 В теплице обнаружена отметка клада');break;
- case 'treasure':dugTreasure=true;score+=8;sparks(cat.position.x,.3,cat.position.z,'hit');sound('hit');toast('⛏️ Нашёл клад! +8 🐟');break;
- case 'gnome':gnomeSaved=true;score+=2;toast('🧙 Садовый гном спасён!');break;
- case 'evidence':if(!ate){toast('Сперва укради вкусняшки из холодильника');return}
-  buriedFish=true;sparks(cat.position.x,.3,cat.position.z,'tear');toast('🕳️ Рыбные улики спрятаны');break;
- case 'sauna':saunaVisited=true;energy=Math.min(100,energy+20);toast('♨️ Отдохнул у бани: +20 энергии');break;
- case 'fountain':bathed=true;mood=100;toast('⛲ Освежился у фонтана!');break;
- case 'bone':dugBone=true;sparks(cat.position.x,.3,cat.position.z,'hit');toast('🦴 Нашёл древнюю косточку');break;
- case 'bury':if(!dugBone){toast('Сначала найди косточку');return}buriedBone=true;toast('🦴 Секрет надёжно закопан!');break;
- default:return;
- }
- updateQuest();setProgress();
-}
 function groom(){if(!playing)return;mood=Math.min(100,mood+3);toast('🧼 Умывание пока без анимации — скелет нового котика не поддерживает её')}
-function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');if(questIndex===quests.length-1&&nearQuest(3,13,5)){storyFinished=true;updateQuest();}if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
+function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');detectiveAction('meow');if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
 function jump(){if(!playing||!grounded||sleeping>0)return;velY=6.7;grounded=false;sound('jump')}
 function toggleView(){viewFirstPerson=!viewFirstPerson;document.getElementById('view').textContent=viewFirstPerson?'🐈 3D-КАМЕРА':'👁️ КАМЕРА';toast(viewFirstPerson?'👁️ Вид от первого лица':'🎥 Камера от третьего лица')}
 function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,storyVersion:2,gardenBench,gardenTrail,gardenClue,garageSearched,shedSearched,greenhouseSearched,saunaVisited,storyFinished,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
