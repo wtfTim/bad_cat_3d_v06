@@ -648,6 +648,61 @@ document.getElementById('edAdd').onclick=async()=>{try{if(!catalog.value){toast(
  customEntries.push({id,name});pickEdit(piece);saveFurniture();persistExtras();toast('🪑 Предмет добавлен — перетащи его')}catch(e){console.error(e);toast('Не удалось загрузить модель')}};
 function persistExtras(){localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(customEntries));}
 
+// Furniture clipboard: duplicates are regular editor objects and survive JSON export/reload.
+let furnitureClipboard=null,pastingFurniture=false;
+function floorBelowFurniture(x,z,y){
+ let floor=0;
+ for(const surface of walkableSurfaces){
+  if(!surface.architecture||x<surface.x1||x>surface.x2||z<surface.z1||z>surface.z2)continue;
+  if(surface.y<=y+.15&&surface.y>floor)floor=surface.y;
+ }
+ return floor;
+}
+function copyEditedPiece(){
+ if(!editSelected||editSelected.removed){toast('📋 Сначала выбери предмет');return}
+ const source=customEntries.find(entry=>entry.id===editSelected.editId);
+ if(!source){toast('📋 Этот предмет нельзя копировать');return}
+ const pos=editSelected.holder.position;
+ furnitureClipboard={
+  name:source.name,rot:editSelected.holder.rotation.y,
+  scale:editSelected.holder.scale.x,
+  aboveFloor:pos.y-floorBelowFurniture(pos.x,pos.z,pos.y)
+ };
+ toast('📋 Скопировано: '+editSelected.description);
+}
+async function pasteEditedPiece(){
+ if(!furnitureClipboard){toast('📋 Сначала выбери предмет и нажми Ctrl+C');return}
+ if(pastingFurniture)return;
+ pastingFurniture=true;
+ const source={...furnitureClipboard};
+ try{
+  const id='custom-'+(++customIndex);
+  const piece=await addCatalogItem(source.name,null,id);
+  const pos=piece.holder.position;
+  // Keep the copied elevation relative to the destination's floor.
+  pos.y+=source.aboveFloor;
+  piece.holder.rotation.y=source.rot;
+  piece.holder.scale.setScalar(source.scale);
+  refreshEditBounds(piece);
+  // Shift closer to the camera when the first spawn candidate clips a wall.
+  if(!canPlaceEdited(piece)){
+   const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
+   const start=pos.clone(),steps=[.35,.7,1.05,1.4,1.75,2.1];
+   for(const back of steps){
+    pos.set(start.x-forward.x*back,start.y,start.z-forward.z*back);
+    // If backing up crosses a floor edge, preserve the pasted vertical offset.
+    pos.y=floorBelowFurniture(pos.x,pos.z,camera.position.y)+source.aboveFloor;
+    if(canPlaceEdited(piece))break;
+   }
+   refreshEditBounds(piece);
+  }
+  customEntries.push({id,name:source.name});
+  pickEdit(piece);saveFurniture();persistExtras();
+  toast('📋 Копия создана перед камерой');
+ }catch(error){console.error('Paste furniture:',error);toast('⚠️ Не удалось вставить предмет')}
+ finally{pastingFurniture=false}
+}
+
 // Starter layout is stored as ordinary editable custom entries, not fixed 3D geometry.
 // All the objects can be moved, removed, exported and re-imported later.
 const starterLayout=[
@@ -884,6 +939,14 @@ function gameInputKey(e){
 function isTextEditing(e){const el=e.target;return el?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(el?.tagName)}
 addEventListener('keydown',e=>{
  if(isTextEditing(e))return;
+ // Editor copy/paste uses its own clipboard, not the system text clipboard.
+ if(editorOn&&(e.ctrlKey||e.metaKey)&&(e.code==='KeyC'||e.code==='KeyV')){
+  e.preventDefault();
+  if(e.repeat)return;
+  if(e.code==='KeyC')copyEditedPiece();
+  else pasteEditedPiece();
+  return;
+ }
  const key=gameInputKey(e);
  if(editorOn){
   if(e.code==='Escape'){toggleEditor(false);return}
