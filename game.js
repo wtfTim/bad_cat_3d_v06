@@ -453,6 +453,7 @@ editorPanel.innerHTML=`<header>🛠️ Редактор мира <button id="edT
  <div class="edLine"><button id="edCameraMode">📷 Камера</button><button id="edFocus">🎯 К предмету</button><button id="edTop">⬇ Вид сверху</button></div>
  <div id="edSelected">Предмет не выбран</div>
  <div class="edLine"><button id="edLeft">←</button><button id="edForward">↑</button><button id="edBack">↓</button><button id="edRight">→</button><button id="edRotL">↶</button><button id="edRotR">↷</button></div>
+ <div class="edLine"><button id="edFineUp">⬆ Выше +10 см</button><button id="edFineDown">⬇ Ниже −10 см</button></div>
  <div class="edLine"><button id="edUp">Этаж ↑</button><button id="edDown">Этаж ↓</button><button id="edRemove">Убрать</button></div>
  <label for="edCategory">Категория:</label><select id="edCategory"></select><label for="edPack">Набор:</label><select id="edPack"></select>
  <label for="edCatalog">Модель:</label><input id="edSearch" placeholder="🔎 Найти модель" style="width:100%;padding:9px;margin-top:5px;border-radius:8px"><select id="edCatalog" size="6" style="height:155px"></select>
@@ -569,7 +570,7 @@ function moveEdit(dx,dz,dy=0,rot=0){
   editSelected.holder.rotation.y+=rot;
  });
 }
-for(const [id,dx,dz,dy,rot] of [['edLeft',-.25,0,0,0],['edRight',.25,0,0,0],['edForward',0,-.25,0,0],['edBack',0,.25,0,0],['edUp',0,0,F,0],['edDown',0,0,-F,0],['edRotL',0,0,0,-Math.PI/12],['edRotR',0,0,0,Math.PI/12]])document.getElementById(id).onclick=()=>moveEdit(dx,dz,dy,rot);
+for(const [id,dx,dz,dy,rot] of [['edLeft',-.25,0,0,0],['edRight',.25,0,0,0],['edForward',0,-.25,0,0],['edBack',0,.25,0,0],['edFineUp',0,0,.10,0],['edFineDown',0,0,-.10,0],['edUp',0,0,F,0],['edDown',0,0,-F,0],['edRotL',0,0,0,-Math.PI/12],['edRotR',0,0,0,Math.PI/12]])document.getElementById(id).onclick=()=>moveEdit(dx,dz,dy,rot);
 document.getElementById('edSave').onclick=()=>{saveFurniture();toast('💾 Расстановка сохранена в браузере!')};
 document.getElementById('edRemove').onclick=()=>{if(!editSelected)return;editSelected.removed=true;editSelected.holder.visible=false;refreshEditBounds(editSelected);pickEdit(null);saveFurniture()};
 let customIndex=0;
