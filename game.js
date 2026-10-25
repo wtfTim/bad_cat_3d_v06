@@ -127,19 +127,19 @@ function setProgress(){HUD.score.textContent=score;HUD.count.textContent=chaos;H
 // The neighborhood story: progress is persistent and every mission has a real place.
 let streetKnocks=0,dugTreasure=false,buriedFish=false,boughtMilk=false,bathed=false,gnomeSaved=false,dugBone=false,buriedBone=false,neighborSlept=false,parkScratched=false,marketFood=false;
 const quests=[
- {text:'ВЫРВИСЬ ИЗ ДОМА — пройди через ворота (+Z)',at:[2.7,21],done:()=>cat.position.z>20.0},
- {text:'РАЗГРОМ СОСЕДЕЙ — опрокинь уличный горшок (E)',at:[45.5,48],done:()=>streetKnocks>=1},
- {text:'РЫБНЫЙ НАЛЁТ — укради рыбу с рынка (G)',at:[0,43],done:()=>marketFood},
- {text:'КОШАЧИЙ КЛАД — раскопай тайник под дубом (X)',at:[-40,41],done:()=>dugTreasure},
- {text:'ЗАКОПАЙ УЛИКИ — спрячь рыбу в парке (X)',at:[-1,-42],done:()=>buriedFish},
- {text:'КОГТИ ПРАВОСУДИЯ — поцарапай лавку в парке (F)',at:[3,-45],done:()=>parkScratched},
- {text:'ЗАГЛЯНИ В МАГАЗИН — купи молоко за 5 рыбок (G)',at:[0,79],done:()=>boughtMilk},
- {text:'ТИХИЙ ЧАС — поспи в чужой спальне (H)',at:[36.2,36.2],done:()=>neighborSlept},
- {text:'УЛИЧНЫЙ ХУЛИГАН — опрокинь 3 предмета (E)',at:[78,38],done:()=>streetKnocks>=3},
- {text:'СПАСИ ГНОМА — найди пропавшего гнома (X)',at:[77,-41],done:()=>gnomeSaved},
- {text:'СПА-КОТИК — искупайся в фонтане (X)',at:[0,-73],done:()=>bathed},
- {text:'КОСТЬ ПРИЗРАКА — раскопай древнюю кость (X)',at:[-78,78],done:()=>dugBone},
- {text:'ТАЙНАЯ ОПЕРАЦИЯ — закопай кость (X)',at:[78,78],done:()=>buriedBone}
+ {text:'ВЫЙДИ В БОЛЬШОЙ САД',at:[3,15],done:()=>cat.position.z>13},
+ {text:'УРОНИ САДОВЫЙ ГОРШОК (E)',at:[-16,35],done:()=>streetKnocks>=1},
+ {text:'УКРАДИ ЕДУ ИЗ ХОЛОДИЛЬНИКА (G)',at:[-9,-7],done:()=>ate},
+ {text:'ОТКОПАЙ КЛАД У ТЕПЛИЦЫ (X)',at:[-37,43],done:()=>dugTreasure},
+ {text:'ЗАКОПАЙ УЛИКИ У ГРЯДОК (X)',at:[-16,48],done:()=>buriedFish},
+ {text:'ПОЦАРАПАЙ САДОВУЮ ЛАВКУ (F)',at:[-2,45],done:()=>parkScratched},
+ {text:'ЗАГЛЯНИ В ГАРАЖ',at:[38,-34],done:()=>Math.hypot(cat.position.x-38,cat.position.z+34)<6},
+ {text:'ПОСПИ В СВОЕЙ СПАЛЬНЕ (H)',at:[-6,5],done:()=>slept},
+ {text:'ОПРОКИНЬ 3 УЛИЧНЫХ ПРЕДМЕТА (E)',at:[-30,-20],done:()=>streetKnocks>=3},
+ {text:'НАЙДИ ГНОМА В САДУ (X)',at:[-50,43],done:()=>gnomeSaved},
+ {text:'ИСКУПАЙСЯ В БАССЕЙНЕ (X)',at:[34,8],done:()=>bathed},
+ {text:'ОТКОПАЙ ТАЙНУЮ КОСТОЧКУ (X)',at:[-55,-47],done:()=>dugBone},
+ {text:'ЗАКОПАЙ КОСТОЧКУ В ТАЙНИКЕ (X)',at:[51,48],done:()=>buriedBone}
 ];
 function updateQuest(){while(questIndex<quests.length&&quests[questIndex].done()){questIndex++;score+=7;energy=Math.min(100,energy+5);toast('🏆 Миссия пройдена! +7 рыбок')}
  const q=quests[questIndex];HUD.quest.textContent=q?`${questIndex+1}/${quests.length} · ${q.text}`:'🏆 ВСЕ 13 МИССИЙ ВЫПОЛНЕНЫ!';
@@ -565,7 +565,7 @@ const furnitureJob=Promise.allSettled([...layout.map((d,i)=>place(d,'kenney-'+i)
  await furnitureExtrasReady();
  failed=results.filter(r=>r.status==='rejected').length;
  if(failed)console.warn('Не удалось загрузить мебель:',results.filter(r=>r.status==='rejected'));
- furnitureReady=true;stage.textContent=`🏘️ Мебель дома и соседей: ${loaded} предметов · Улица: ${yardLoaded}/${gardenLayout.length}`+(failed?` · ${failed} ошибок`:' · всё на местах!');
+ furnitureReady=true;stage.textContent=`🏡 Мебель в усадьбе: ${loaded} предметов · Улица: ${yardLoaded}/${gardenLayout.length}`+(failed?` · ${failed} ошибок`:' · всё на местах!');
  const button=document.getElementById('play');button.disabled=false;button.style.opacity='1';button.textContent='Играть! 🐾';
  // Old saves came from a different furniture layout. Use safe spawn positions on both floors.
  if(isBlocked(cat.position.x,cat.position.z,cat.position.y))cat.position.set(-1.8,0,5.2);
@@ -587,7 +587,7 @@ function chaosAction(type){if(!playing)return;
  const item=nearest(type,type==='scratch'?1.75:1.85);
  if(!item){toast(type==='scratch'?'🐾 Подойди к дивану, креслу или шкафу':type==='tear'?'🧻 Найди подушку, коробку или книги':'💥 Подойди к предмету');return}
  item.used=true;chaos++;score+=type==='scratch'?3:type==='tear'?2:1;alertness=Math.min(100,alertness+17);mood=Math.min(100,mood+5);
- if(type==='scratch'){scratched=true;if(item.model==='Парковая лавка')parkScratched=true;}
+ if(type==='scratch'){scratched=true;if(item.model==='Садовая лавка')parkScratched=true;}
  if(type==='knock'&&item.kind==='street')streetKnocks++;
  const p=item.holder.position;sparks(p.x,cat.position.y+.5,p.z,type);
  if(type==='scratch'){
@@ -606,27 +606,22 @@ function autoKnock(){for(const it of interactables){if(it.action!=='knock'||it.u
 }}
 function stealFood(){if(!playing)return;
  const x=cat.position.x,z=cat.position.z;
- if(cat.position.y<1.5&&Math.hypot(x,z-43)<4.4){marketFood=true;hunger=Math.min(100,hunger+38);score+=3;toast('🐟 Рыбный налёт! +3 рыбки');sound('eat');updateQuest();return;}
- if(cat.position.y<1.5&&Math.hypot(x,z-79)<4.4){if(!boughtMilk&&score<5){toast('🛒 На молоко нужно 5 рыбок!');return}if(!boughtMilk)score-=5;boughtMilk=true;hunger=Math.min(100,hunger+20);toast('🥛 Купил молоко и вылизал пакет!');sound('eat');updateQuest();return;}
-
  const d=Math.hypot(cat.position.x+9.53,cat.position.z+7.47);
  if(cat.position.y>1.5||d>2.1){toast('🐟 Ищи вкусняшки возле холодильника на кухне');return}
  hunger=Math.min(100,hunger+30);mood=Math.min(100,mood+6);ate=true;score+=4;alertness=Math.min(100,alertness+10);sound('eat');toast('🐟 Украл еду из холодильника! +4 рыбки');updateQuest();setProgress();
 }
 function goSleep(){if(!playing)return;
- if(cat.position.y<1.5&&Math.hypot(cat.position.x-36.2,cat.position.z-36.2)<2.7){neighborSlept=true;sleeping=4;energy=100;toast('💤 Уснул в чужом доме!');updateQuest();return;}
-
  if(cat.position.y<F-1||Math.hypot(cat.position.x+6.65,cat.position.z-5.55)>2.4){toast('💤 Найди кровать на втором этаже');return}
  sleeping=4;energy=100;mood=Math.min(100,mood+12);slept=true;sound('sleep');toast('💤 Мурр... котик отдыхает');updateQuest();
 }
 function questInteract(){if(!playing)return;
  const x=cat.position.x,z=cat.position.z,near=(a,b,d=2.8)=>Math.hypot(x-a,z-b)<d;
- if(near(-40,41)){if(!dugTreasure){dugTreasure=true;score+=8;sparks(x,.3,z,'hit');sound('hit');toast('⛏️ Откопал старые рыбки! +8 🐟')}else toast('Здесь уже выкопано');}
- else if(near(-1,-42)){if(!buriedFish){if(!marketFood){toast('Сначала укради рыбу на рынке!');return}buriedFish=true;sparks(x,.3,z,'tear');toast('🕳️ Закопал улики в парке!')}else toast('Здесь уже спрятана рыба');}
- else if(near(77,-41,3.2)){gnomeSaved=true;score+=2;toast('🧙 Спас садового гнома!');}
- else if(near(0,-73,4)){bathed=true;mood=100;energy=Math.min(100,energy+10);toast('⛲ Котик искупался в фонтане!');}
- else if(near(-78,78)){dugBone=true;toast('🦴 Откопал древнюю косточку!');sparks(x,.3,z,'hit');}
- else if(near(78,78)){if(!dugBone){toast('Сначала найди кость на северо-западе!');return}buriedBone=true;toast('🦴 Тайна закопана навечно!');sparks(x,.3,z,'hit');}
+ if(near(-37,43)){if(!dugTreasure){dugTreasure=true;score+=8;sparks(x,.3,z,'hit');sound('hit');toast('⛏️ Откопал старые рыбки! +8 🐟')}else toast('Здесь уже выкопано');}
+ else if(near(-16,48)){if(!buriedFish){if(!ate){toast('Сначала укради еду из холодильника!');return}buriedFish=true;sparks(x,.3,z,'tear');toast('🕳️ Закопал улики в парке!')}else toast('Здесь уже спрятана рыба');}
+ else if(near(-50,43,3.2)){gnomeSaved=true;score+=2;toast('🧙 Спас садового гнома!');}
+ else if(near(34,8,7)){bathed=true;mood=100;energy=Math.min(100,energy+10);toast('⛲ Котик искупался в фонтане!');}
+ else if(near(-55,-47)){dugBone=true;toast('🦴 Откопал древнюю косточку!');sparks(x,.3,z,'hit');}
+ else if(near(51,48)){if(!dugBone){toast('Сначала найди кость на северо-западе!');return}buriedBone=true;toast('🦴 Тайна закопана навечно!');sparks(x,.3,z,'hit');}
  else {toast('🧭 Ищи точку задания 📍 на миникарте · X — действие');return}
  updateQuest();setProgress();
 }
@@ -722,19 +717,19 @@ function updateCamera(dt){if(editorOn){
 }
 function updateRoom(){const upstairs=cat.position.y>F-1.1,left=cat.position.x<0,back=cat.position.z<0;
  const names=upstairs?(left?(back?'Ванная':'Спальня'):(back?'Кабинет':'Игровая')):(left?(back?'Кухня':'Гостиная'):(back?'Столовая':'Холл'));
- HUD.room.textContent=(Math.abs(cat.position.x)>19||cat.position.z>19||cat.position.z<-19)?'🏘️ Кошачий район · '+(Math.round(cat.position.x))+', '+Math.round(cat.position.z):(cat.position.x<-11||cat.position.x>11||cat.position.z<-9||cat.position.z>9)?'🌳 Домашний двор':'🏠 '+(upstairs?'2 этаж · ':'1 этаж · ')+names;
+ HUD.room.textContent=(Math.abs(cat.position.x)>19||cat.position.z>19||cat.position.z<-19)?'🌳 Большая усадьба · '+(Math.round(cat.position.x))+', '+Math.round(cat.position.z):(cat.position.x<-11||cat.position.x>11||cat.position.z<-9||cat.position.z>9)?'🌳 Домашний двор':'🏠 '+(upstairs?'2 этаж · ':'1 этаж · ')+names;
 }
 const mapCanvas=document.getElementById('mapCanvas'),mapCtx=mapCanvas.getContext('2d');let mapBig=false;
 function drawMap(){
  const c=mapCtx,S=c.canvas.width,scale=mapBig?1.9:2.65,px=cat.position.x,pz=cat.position.z;
  c.clearRect(0,0,S,S);c.fillStyle='#9cc780';c.fillRect(0,0,S,S);
  const xx=x=>S/2+(x-px)*scale,zz=z=>S/2+(z-pz)*scale;
- c.fillStyle='#75818b';for(const r of [-59,-21,21,59]){c.fillRect(xx(r-3.5),0,7*scale,S);c.fillRect(0,zz(r-3.5),S,7*scale)}
- c.fillStyle='#deb58d';for(const [x,z] of homeCenters)c.fillRect(xx(x-7),zz(z-6.5),14*scale,13*scale);
- c.fillStyle='#efe4d2';c.fillRect(xx(-11),zz(-9),22*scale,18*scale);
- c.fillStyle='#5e895a';c.fillRect(xx(-18),zz(-16),36*scale,34*scale);
+ c.fillStyle='#79ac70';c.fillRect(xx(-68),zz(-68),136*scale,136*scale);
+ c.strokeStyle='#886d50';c.lineWidth=2;c.strokeRect(xx(-68),zz(-68),136*scale,136*scale);
+ c.fillStyle='#cdb99e';for(const b of estateBuildings)c.fillRect(xx(b.x-b.w/2),zz(b.z-b.d/2),b.w*scale,b.d*scale);
+ c.fillStyle='#64bde0';c.fillRect(xx(26.5),zz(3),15*scale,10*scale);
+ c.fillStyle='#765a3f';for(const x of [-8,-4,0,4,8])c.fillRect(xx(x-1.5),zz(33.1),3*scale,5.8*scale);
  c.fillStyle='#f0d2b9';c.fillRect(xx(-11),zz(-9),22*scale,18*scale);
- for(const [x,z] of [[0,-73],[0,43],[0,79]]){c.fillStyle='#55a7c5';c.beginPath();c.arc(xx(x),zz(z),3.5,0,Math.PI*2);c.fill()}
  const q=quests[questIndex];if(q){const x=xx(q.at[0]),z=zz(q.at[1]);c.strokeStyle='#fff';c.lineWidth=2;c.fillStyle='#e15b43';c.beginPath();c.arc(x,z,7,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#fff';c.font='bold 11px system-ui';c.textAlign='center';c.fillText('!',x,z+4)}
  c.save();c.translate(S/2,S/2);c.rotate(-cat.rotation.y);c.fillStyle='#222';c.beginPath();c.moveTo(0,9);c.lineTo(-7,-6);c.lineTo(7,-6);c.closePath();c.fill();c.strokeStyle='white';c.lineWidth=2;c.stroke();c.restore();
 }
