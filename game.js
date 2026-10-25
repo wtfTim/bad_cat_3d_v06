@@ -241,31 +241,53 @@ function floorOf(y){return y>F-1.1?F:0}
 function isBlocked(x,z,feet,r=CAT_RADIUS,height=.70,sourceFilter=null){
  if(x<-107+r||x>107-r||z<-107+r||z>107-r)return true;
  for(const b of colliders){if(sourceFilter&&!sourceFilter(b))continue;
-  if(feet+.07<b.y2&&feet+height>b.y1 && x+r>b.x1&&x-r<b.x2&&z+r>b.z1&&z-r<b.z2)return true;
+  if(feet+.07<b.y2&&feet+height>b.y1 && x+r>b.x1&&x-r<b.x2&&z+r>b.z1&&z-r<b.z2){
+   // Standing on a supported seat/bench/table should not count as being trapped
+   // by taller decorative backs or armrests of the same furniture piece.
+   const supported=walkableSurfaces.some(s=>s!==null&&s.y>-998&&
+     Math.abs(s.y-feet)<.11&&x>s.x1-.08&&x<s.x2+.08&&z>s.z1-.08&&z<s.z2+.08&&
+     s.x1<=b.x1+.12&&s.x2>=b.x2-.12&&s.z1<=b.z1+.12&&s.z2>=b.z2-.12);
+   if(!supported)return true;
+  }
  }
  return false;
 }
-function groundSupport(x,z,feet,prev){let best=-999;
+function groundSupport(x,z,feet,prev){let best=0;
  for(const s of walkableSurfaces){if(x+CAT_RADIUS*.38<=s.x1||x-CAT_RADIUS*.38>=s.x2||z+CAT_RADIUS*.38<=s.z1||z-CAT_RADIUS*.38>=s.z2)continue;
-  if(s.y<=prev+.31&&s.y>best)best=s.y;
+  if(s.y<=prev+.18&&s.y>best)best=s.y;
  }return best;
 }
-// Find a nearby free escape position for a character trapped by a newly added object.
-function findSafeCatPosition(){
- const x=cat.position.x,z=cat.position.z,y=cat.position.y;
- if(!isBlocked(x,z,y))return null;
- // Prefer a position outside the obstruction on the same floor; never teleport blindly.
- for(let radius=.35;radius<=3.6;radius+=.3){
-  for(let i=0;i<24;i++){
-   const angle=(i/24)*Math.PI*2,cx=x+Math.cos(angle)*radius,cz=z+Math.sin(angle)*radius;
-   if(!isBlocked(cx,cz,y,CAT_RADIUS+.02,.7)){
-    const level=groundSupport(cx,cz,y,y);
-    if(level>-100&&Math.abs(level-y)<.55)return [cx,cz,level];
-    if(y<.55)return [cx,cz,0];
+// Manual-only rescue. Searches for nearest unobstructed position at the current level.
+function safeRecoverySpot(){
+ const x=cat.position.x,z=cat.position.z,y=Math.max(0,cat.position.y);
+ const candidates=[];
+ for(let radius=.45;radius<=7.2;radius+=.3){
+  for(let i=0;i<32;i++){
+   const angle=i*Math.PI/16;
+   const cx=x+Math.cos(angle)*radius,cz=z+Math.sin(angle)*radius;
+   const top=groundSupport(cx,cz,y,y);
+   // The active floor comes first, allowing safe recovery upstairs.
+   const heights=[top,Math.max(0,Math.min(y,F)),0];
+   for(const level of heights){
+    if(Math.abs(level-y)>1.2)continue;
+    if(isBlocked(cx,cz,level,CAT_RADIUS+.05,.72))continue;
+    // Ensure the spot really has supporting terrain/floor and isn't midway in air.
+    if(Math.abs(groundSupport(cx,cz,level,level)-level)>.13)continue;
+    candidates.push({x:cx,z:cz,y:level,score:radius+Math.abs(level-y)*2});
+    break;
    }
   }
+  if(candidates.length)return candidates.sort((a,b)=>a.score-b.score)[0];
  }
  return null;
+}
+function manualUnstuck(){
+ if(!playing||editorOn)return;
+ const safe=safeRecoverySpot();
+ if(!safe){toast('🐾 Рядом нет свободного места, отойди или попробуй ещё раз');return}
+ cat.position.set(safe.x,safe.y,safe.z);
+ velY=0;grounded=true;
+ toast('🐾 Выбрался рядом!');
 }
 function stairLevel(x,z){return x>6.74&&x<9.47&&z>.98&&z<8.12?THREE.MathUtils.clamp((8.05-z)/(stepDepth*stairSteps)*F,0,F):null}
 
@@ -1347,7 +1369,7 @@ function loadGame(){try{const current=localStorage.getItem('badcat3d-house-v21')
  }catch(e){console.warn('Ошибка чтения сохранения',e)}}
 loadGame();
 
-for(const [id,action] of [['jump',jump],['swat',()=>chaosAction('knock')],['scratch',()=>chaosAction('scratch')],['tear',()=>chaosAction('tear')],['eat',stealFood],['sleep',goSleep],['meow',meow],['groom',groom],['view',toggleView],['use',questInteract]]){
+for(const [id,action] of [['jump',jump],['swat',()=>chaosAction('knock')],['scratch',()=>chaosAction('scratch')],['tear',()=>chaosAction('tear')],['eat',stealFood],['sleep',goSleep],['meow',meow],['groom',groom],['view',toggleView],['use',questInteract],['unstuck',manualUnstuck]]){
  document.getElementById(id).addEventListener('pointerdown',e=>{e.preventDefault();action()});
 }
 // Physical keyboard positions work regardless of RU/EN keyboard layout.
@@ -1407,11 +1429,6 @@ document.getElementById('reset').onclick=()=>{localStorage.removeItem('badcat3d-
 const fps=document.createElement('div');fps.style.cssText='position:fixed;right:12px;bottom:8px;z-index:4;background:#263344c4;color:#fff;padding:5px 10px;border-radius:9px;font:700 12px system-ui;pointer-events:none';fps.textContent='⚡ FPS';document.body.append(fps);
 let fpsFrames=0,fpsSum=0;const clock=new THREE.Clock(),ray=new THREE.Raycaster();
 function updatePhysics(dt){
- // Editor can move props onto the player: safely eject the cat before processing motion.
- if(isBlocked(cat.position.x,cat.position.z,cat.position.y)){
-  const escape=findSafeCatPosition();
-  if(escape){cat.position.set(...escape);velY=0;grounded=true;}
- }
  const dx=stick.x+Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft));
  const dz=stick.y+Number(!!(keys.w||keys.arrowup))-Number(!!(keys.s||keys.arrowdown));
  let moving=Math.hypot(dx,dz)>.12;
@@ -1427,10 +1444,13 @@ function updatePhysics(dt){
  if(stair!=null&&velY<=0&&Math.abs(cat.position.y-stair)<.75){cat.position.y=stair;velY=0;grounded=true}
  const prev=cat.position.y;
  velY-=16*dt;cat.position.y+=velY*dt;
+ // Floor support uses previous feet position, so swept descents never tunnel
+ // through furniture tops or the second-floor slabs.
  let level=groundSupport(cat.position.x,cat.position.z,cat.position.y,prev);
  if(stair!=null&&Math.abs(prev-stair)<.75)level=Math.max(level,stair);
- if(velY<=0&&level>-100&&cat.position.y<=level+.08&&prev>=level-.28){cat.position.y=level;velY=0;grounded=true}else grounded=false;
- if(cat.position.y<-.4){cat.position.set(-1.8,0,5.2);velY=0;grounded=true;toast('🐾 Котик вернулся на пол')}
+ if(velY<=0&&level>-100&&cat.position.y<=level+.08&&prev>=level-.12){cat.position.y=level;velY=0;grounded=true}else grounded=false;
+ // The terrain is a permanent safety floor: never fall under ground or teleport home.
+ if(cat.position.y<=0){cat.position.y=0;velY=0;grounded=true;}
  animateCat(dt,moving,!!keys.shift);
  return moving;
 }
