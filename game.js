@@ -396,6 +396,26 @@ function estateBuilding(b){
  addBox(1.7,.85,.8,material('#aa815d'),x-w/2+1.4,.42,z-1.4,{top:true});streetCollider(x-w/2+1.4,z-1.4,1.7,.8,.85);
 }
 for(const b of estateBuildings)estateBuilding(b);
+// Furnish the actual estate outbuildings from the existing Tiny Living pack.
+// Positions are inside their accessible doorways; furniture stays editable.
+const estateInteriorLayout=[
+ // Garage: tools, workbench-style desk and storage.
+ ['TinyLiving_TinyDeskForTinyLiving_37',38,-37.6,0,2.15,1.0,1.0,0,'table','scratch',true],
+ ['TinyLiving_TieredShelf_29',32.1,-34.6,0,1.1,.55,1.8,Math.PI/2,'solid','scratch',true],
+ ['TinyLiving_StubbyCubbyDresser_38',42.8,-37.0,0,1.2,.6,1.1,0,'solid','knock',true],
+ // Shed: shelves, a practical table and a chair.
+ ['TinyLiving_OpenShelf_31',-46.3,-32.8,0,1.1,.6,1.35,Math.PI/2,'solid','scratch',true],
+ ['TinyLiving_TinyDeskForTinyLiving_37',-41.3,-33.2,0,1.7,.88,.95,0,'table','scratch',true],
+ // Sauna: a small lounge area and a sink.
+ ['TinyLiving_LovelyLoveseat_12',37.5,32.7,0,2.35,1.1,1.35,0,'sofa','scratch',true],
+ ['TinyLiving_TheSinkzBathroomVanity_32',44.4,33.0,0,1.05,.68,.95,Math.PI/2,'solid','scratch',true],
+ ['TinyLiving_LampWithoutStorage_20',35.7,36.2,0,.48,.48,1.6,0,'solid','knock',true],
+ // Greenhouse: stands with real plants and garden furniture.
+ ['TinyLiving_VerticalMiniGarden_27',-45.8,33.0,0,1.25,.74,1.65,Math.PI/2,'solid','knock',true],
+ ['TinyLiving_MyKindaZen_22',-38.0,33.3,0,1.35,.8,1.5,0,'solid','knock',true],
+ ['TinyLiving_TieredShelf_29',-34.6,35.1,0,1.25,.55,1.7,-Math.PI/2,'solid','scratch',true]
+];
+
 const paving=material('#ccba9e'),poolWater=new THREE.MeshStandardMaterial({color:'#59bde1',roughness:.15,transparent:true,opacity:.82});
 for(const [x,z,w,d] of [[20,-32,26,3],[-23,-31,24,2.4],[23,35,25,2.6],[-24,36,22,2.6],[0,25,3,34],[23,0,3,63]])outdoorsBox(w,.03,d,paving,x,-.01,z);
 outdoorsBox(19,.18,14,material('#ddd4c5'),34,.06,8);
@@ -590,7 +610,7 @@ function editRay(event){const rect=renderer.domElement.getBoundingClientRect();r
 function selectFromPointer(event){editRay(event);const targets=[...editablePieces.values()].filter(p=>!p.removed).map(p=>p.holder);const hits=editHits.intersectObjects(targets,true);if(!hits.length){pickEdit(null);return;}let obj=hits[0].object;while(obj&&!targets.includes(obj))obj=obj.parent;const item=[...editablePieces.values()].find(p=>p.holder===obj);pickEdit(item||null)}
 const furnitureExtrasReady=()=>loadExtras();
 
-const furnitureJob=Promise.allSettled([...layout.map((d,i)=>place(d,'kenney-'+i)),...tinyMainLayout.map((d,i)=>placeTiny(d,'tinyhome-'+i)),...tinyNeighborhoodLayout.map((d,i)=>placeTiny(d,'neighbor-'+i)),...gardenLayout.map((d,i)=>placeGarden(d,'yard-'+i))]).then(async results=>{
+const furnitureJob=Promise.allSettled([...layout.map((d,i)=>place(d,'kenney-'+i)),...tinyMainLayout.map((d,i)=>placeTiny(d,'tinyhome-'+i)),...estateInteriorLayout.map((d,i)=>placeTiny(d,'estate-'+i)),...gardenLayout.map((d,i)=>placeGarden(d,'yard-'+i))]).then(async results=>{
  await furnitureExtrasReady();
  failed=results.filter(r=>r.status==='rejected').length;
  if(failed)console.warn('Не удалось загрузить мебель:',results.filter(r=>r.status==='rejected'));
@@ -658,13 +678,13 @@ function groom(){if(!playing)return;mood=Math.min(100,mood+3);toast('🧼 Умы
 function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
 function jump(){if(!playing||!grounded||sleeping>0)return;velY=6.7;grounded=false;sound('jump')}
 function toggleView(){viewFirstPerson=!viewFirstPerson;document.getElementById('view').textContent=viewFirstPerson?'🐈 3D-КАМЕРА':'👁️ КАМЕРА';toast(viewFirstPerson?'👁️ Вид от первого лица':'🎥 Камера от третьего лица')}
-function saveGame(notify=false){try{localStorage.setItem('badcat3d-v16',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
-function loadGame(){try{const current=localStorage.getItem('badcat3d-v16');const s=JSON.parse(current||localStorage.getItem('badcat3d-v15')||localStorage.getItem('badcat3d-v04')||'null');if(!s)return;
+function saveGame(notify=false){try{localStorage.setItem('badcat3d-estate-v20',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
+function loadGame(){try{const current=localStorage.getItem('badcat3d-estate-v20');const s=JSON.parse(current||localStorage.getItem('badcat3d-v16')||localStorage.getItem('badcat3d-v15')||localStorage.getItem('badcat3d-v04')||'null');if(!s)return;
  score=s.score||0;chaos=s.chaos??s.count??0;hunger=s.hunger??85;energy=s.energy??90;mood=s.mood??85;questIndex=current?(s.questIndex||0):0;
  ate=!!s.ate;scratched=!!s.scratched;slept=!!s.slept;escaped=!!s.escaped;
- streetKnocks=s.streetKnocks||0;dugTreasure=!!s.dugTreasure;buriedFish=!!s.buriedFish;boughtMilk=!!s.boughtMilk;bathed=!!s.bathed;gnomeSaved=!!s.gnomeSaved;dugBone=!!s.dugBone;buriedBone=!!s.buriedBone;neighborSlept=!!s.neighborSlept;parkScratched=!!s.parkScratched;marketFood=!!s.marketFood;
+ streetKnocks=current?(s.streetKnocks||0):0;dugTreasure=!!current&&!!s.dugTreasure;buriedFish=!!current&&!!s.buriedFish;boughtMilk=false;bathed=!!current&&!!s.bathed;gnomeSaved=!!current&&!!s.gnomeSaved;dugBone=!!current&&!!s.dugBone;buriedBone=!!current&&!!s.buriedBone;neighborSlept=false;parkScratched=!!current&&!!s.parkScratched;marketFood=false;
  // Avoid stale positions landing inside furniture; validate after load.
- if(current&&Array.isArray(s.cat)&&s.cat.length===3&&s.cat.every(Number.isFinite))cat.position.set(...s.cat);
+ if(current&&Array.isArray(s.cat)&&s.cat.length===3&&s.cat.every(Number.isFinite)&&Math.abs(s.cat[0])<67&&Math.abs(s.cat[2])<67)cat.position.set(...s.cat);
  updateQuest();setProgress();
  }catch(e){console.warn('Ошибка чтения сохранения',e)}}
 loadGame();
@@ -771,8 +791,11 @@ function render(){requestAnimationFrame(render);const dt=Math.min(clock.getDelta
   updateQuest();setProgress();updateRoom();
  }
  if(elapsed>messageUntil)HUD.message.style.opacity='0';
- for(const roof of roofPieces){const distance=Math.hypot(cat.position.x-roof.x,cat.position.z-roof.z);
-  roof.mesh.visible=distance>10||cat.position.y>2.5;}
+ for(const roof of roofPieces){
+  const focus=editorOn?editCamTarget:cat.position;
+  const distance=Math.hypot(focus.x-roof.x,focus.z-roof.z);
+  roof.mesh.visible=distance>(editorOn?12:10)||(!editorOn&&cat.position.y>2.5);
+ }
  if(Math.floor(elapsed*7)!==Math.floor((elapsed-dt)*7))drawMap();
  if(editHelper&&editSelected)editHelper.update();updateCamera(dt);renderer.render(scene,camera);if(editorOn&&previewObject){previewObject.rotation.y+=dt*.42;previewRenderer.render(previewScene,previewCamera)}
  fpsFrames++;fpsSum+=dt;if(fpsSum>.8){fps.textContent='⚡ '+Math.round(fpsFrames/fpsSum)+' FPS';fpsSum=0;fpsFrames=0}
