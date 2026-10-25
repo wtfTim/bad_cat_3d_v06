@@ -245,19 +245,44 @@ function toast(text){HUD.message.textContent=text;HUD.message.style.opacity='1';
 function setProgress(){HUD.score.textContent=score;HUD.count.textContent=chaos;HUD.hunger.textContent=Math.round(hunger);HUD.energy.textContent=Math.round(energy);HUD.alert.textContent=alertness>55?'ПОГОНЯ!':alertness>20?'Ищет котика':'Спокойно';HUD.mood.textContent=mood>60?'Довольный 😺':mood>25?'Скучает 😿':'Грустный 🙀'}
 // The neighborhood story: progress is persistent and every mission has a real place.
 let streetKnocks=0,dugTreasure=false,buriedFish=false,boughtMilk=false,bathed=false,gnomeSaved=false,dugBone=false,buriedBone=false,neighborSlept=false,parkScratched=false,marketFood=false;
+let gardenBench=false,gardenTrail=false,gardenClue=false,garageSearched=false,shedSearched=false,greenhouseSearched=false,saunaVisited=false,storyFinished=false;
+const nearQuest=(x,z,d=4)=>Math.hypot(cat.position.x-x,cat.position.z-z)<d;
+function nearestFridge(){
+ const f=[...editablePieces.values()].filter(p=>!p.removed&&p.holder.visible&&/fridge|refrigerator|холодильник/i.test(p.model+' '+p.description));
+ f.sort((a,b)=>Math.hypot(cat.position.x-a.holder.position.x,cat.position.z-a.holder.position.z)-Math.hypot(cat.position.x-b.holder.position.x,cat.position.z-b.holder.position.z));
+ return f[0]||null;
+}
 const quests=[
- {text:'ВЫЙДИ В БОЛЬШОЙ ДВОР',at:[3,15],done:()=>cat.position.z>13},
- {text:'ЗАЙДИ В ГАРАЖ',at:[38,-34],done:()=>Math.hypot(cat.position.x-38,cat.position.z+34)<5},
- {text:'ПОСЕТИ САРАЙ',at:[-42,-31],done:()=>Math.hypot(cat.position.x+42,cat.position.z+31)<4},
- {text:'ЗАГЛЯНИ В БАНЮ',at:[40,35],done:()=>Math.hypot(cat.position.x-40,cat.position.z-35)<4},
- {text:'ПРОВЕРЬ ТЕПЛИЦУ',at:[-40,36],done:()=>Math.hypot(cat.position.x+40,cat.position.z-36)<4},
- {text:'ВЕРНИСЬ К КРЫЛЬЦУ',at:[3,12],done:()=>Math.hypot(cat.position.x-3,cat.position.z-12)<4},
- {text:'ПОСПИ ДОМА (H)',at:[-7,5],done:()=>slept},
- {text:'ПОЦАРАПАЙ РАССТАВЛЕННЫЙ ТОБОЙ ПРЕДМЕТ (F)',at:[0,5],done:()=>scratched}
+ {id:'porch',text:'Выйди из дома и осмотри двор',at:[3,13],done:()=>nearQuest(3,13,4)},
+ {id:'trail',text:'Пройди по дорожке нового сада',at:[2,22],done:()=>nearQuest(2,22,5)},
+ {id:'bench',text:'Найди записку под садовой скамейкой (X)',at:[-9.5,16],done:()=>gardenBench},
+ {id:'tracks',text:'Ищи кошачьи следы у деревьев (X)',at:[-20,27],done:()=>gardenTrail},
+ {id:'map',text:'Найди тайную карту возле беседки (X)',at:[-20,27],done:()=>gardenClue},
+ {id:'eat',text:'Подкрепись у своего холодильника (G / ЕШЬ)',at:[-9.5,-7.5],done:()=>ate},
+ {id:'shed',text:'Найди лопатку в сарае (X)',at:[-42,-31],done:()=>shedSearched},
+ {id:'garage',text:'Проверь инструменты в гараже (X)',at:[38,-34],done:()=>garageSearched},
+ {id:'greenhouse',text:'Ищи улику в теплице (X)',at:[-40,36],done:()=>greenhouseSearched},
+ {id:'treasure',text:'Откопай спрятанный клад (X)',at:[-37,43],done:()=>dugTreasure},
+ {id:'gnome',text:'Помоги садовому гному (X)',at:[-50,43],done:()=>gnomeSaved},
+ {id:'evidence',text:'Закопай рыбные улики (X)',at:[-16,48],done:()=>buriedFish},
+ {id:'sauna',text:'Передохни возле бани (X)',at:[40,35],done:()=>saunaVisited},
+ {id:'fountain',text:'Освежись у фонтана (X)',at:[34,8],done:()=>bathed},
+ {id:'bone',text:'Откопай древнюю косточку (X)',at:[-55,-47],done:()=>dugBone},
+ {id:'bury',text:'Спрячь косточку у изгороди (X)',at:[51,48],done:()=>buriedBone},
+ {id:'sleep',text:'Вернись домой и выспись (H / СПАТЬ)',at:[-7,5],done:()=>slept},
+ {id:'scratch',text:'Оставь кошачью метку на мебели (F)',at:[0,5],done:()=>scratched},
+ {id:'home',text:'Вернись в свой сад с сокровищем',at:[2,22],done:()=>nearQuest(2,22,5)},
+ {id:'victory',text:'Мяукни у крыльца в честь победы (M)',at:[3,13],done:()=>storyFinished}
 ];
-function updateQuest(){while(questIndex<quests.length&&quests[questIndex].done()){questIndex++;score+=7;energy=Math.min(100,energy+5);toast('🏆 Миссия пройдена! +7 рыбок')}
- const q=quests[questIndex];HUD.quest.textContent=q?`${questIndex+1}/${quests.length} · ${q.text}`:'🏆 ВСЕ 13 МИССИЙ ВЫПОЛНЕНЫ!';
- const t=document.getElementById('questDistance');if(t)t.textContent=q?`📍 ${Math.round(Math.hypot(cat.position.x-q.at[0],cat.position.z-q.at[1]))} м до цели`:'🎉 Кошачья легенда района';
+function questTarget(q){const f=q?.id==='eat'?nearestFridge():null;return f?[f.holder.position.x,f.holder.position.z]:q?.at}
+function updateQuest(){
+ let passed=0;
+ while(questIndex<quests.length&&quests[questIndex].done()){questIndex++;passed++;score+=7;energy=Math.min(100,energy+5)}
+ if(passed)toast('🏆 Новая глава пройдена! +'+(passed*7)+' 🐟');
+ const q=quests[questIndex],at=questTarget(q);
+ HUD.quest.textContent=q?`${questIndex+1}/${quests.length} · ${q.text}`:'🏆 Всё приключение пройдено!';
+ const t=document.getElementById('questDistance');
+ if(t)t.textContent=q?`📍 ${Math.round(Math.hypot(cat.position.x-at[0],cat.position.z-at[1]))} м до цели · X — действие`:'🎉 Тайна сада раскрыта!';
 }
 function floorOf(y){return y>F-1.1?F:0}
 function isBlocked(x,z,feet,r=CAT_RADIUS,height=.70,sourceFilter=null){
@@ -1421,29 +1446,45 @@ function autoKnock(){for(const it of interactables){if(it.action!=='knock'||it.u
   chaosAction('knock');break;
  }
 }}
+let lastMeal=-100;
 function stealFood(){if(!playing)return;
- const x=cat.position.x,z=cat.position.z;
- const d=Math.hypot(cat.position.x+9.53,cat.position.z+7.47);
- if(cat.position.y>1.5||d>2.1){toast('🐟 Ищи вкусняшки возле холодильника на кухне');return}
- hunger=Math.min(100,hunger+30);mood=Math.min(100,mood+6);ate=true;score+=4;alertness=Math.min(100,alertness+10);sound('eat');toast('🐟 Украл еду из холодильника! +4 рыбки');updateQuest();setProgress();
+ const fridge=nearestFridge();
+ if(!fridge){toast('🐟 Холодильник не найден в расстановке');return}
+ if(cat.position.y>fridge.holder.position.y+1.3||Math.hypot(cat.position.x-fridge.holder.position.x,cat.position.z-fridge.holder.position.z)>2.6){
+  toast('🐟 Подойди к своему холодильнику на кухне');return;
+ }
+ if(elapsed-lastMeal<12){toast('🐟 Котик сыт, попробуй чуть позже');return}
+ lastMeal=elapsed;hunger=Math.min(100,hunger+38);mood=Math.min(100,mood+8);
+ ate=true;score+=4;alertness=Math.min(100,alertness+9);sound('eat');
+ toast('🐟 Нашёл еду в холодильнике! +4 🐟');updateQuest();setProgress();
 }
 function goSleep(){if(!playing)return;
  if(cat.position.y<F-1||Math.hypot(cat.position.x+6.65,cat.position.z-5.55)>2.4){toast('💤 Найди кровать на втором этаже');return}
  sleeping=4;energy=100;mood=Math.min(100,mood+12);slept=true;sound('sleep');toast('💤 Мурр... котик отдыхает');updateQuest();
 }
 function questInteract(){if(!playing)return;
- const x=cat.position.x,z=cat.position.z,near=(a,b,d=2.8)=>Math.hypot(x-a,z-b)<d;
- if(near(-37,43)){if(!dugTreasure){dugTreasure=true;score+=8;sparks(x,.3,z,'hit');sound('hit');toast('⛏️ Откопал старые рыбки! +8 🐟')}else toast('Здесь уже выкопано');}
- else if(near(-16,48)){if(!buriedFish){if(!ate){toast('Сначала укради еду из холодильника!');return}buriedFish=true;sparks(x,.3,z,'tear');toast('🕳️ Закопал улики в парке!')}else toast('Здесь уже спрятана рыба');}
- else if(near(-50,43,3.2)){gnomeSaved=true;score+=2;toast('🧙 Спас садового гнома!');}
- else if(near(34,8,7)){bathed=true;mood=100;energy=Math.min(100,energy+10);toast('⛲ Котик искупался в фонтане!');}
- else if(near(-55,-47)){dugBone=true;toast('🦴 Откопал древнюю косточку!');sparks(x,.3,z,'hit');}
- else if(near(51,48)){if(!dugBone){toast('Сначала найди кость на северо-западе!');return}buriedBone=true;toast('🦴 Тайна закопана навечно!');sparks(x,.3,z,'hit');}
- else {toast('🧭 Ищи точку задания 📍 на миникарте · X — действие');return}
+ const x=cat.position.x,z=cat.position.z,near=(a,b,r=5)=>Math.hypot(x-a,z-b)<r;
+ if(quests[questIndex]?.id==='eat'){stealFood();return}
+ if(near(-9.5,16,4.3)){gardenBench=true;toast('🪑 Под лавкой записка: «Ищи следы среди деревьев…»')}
+ else if(near(-20,27,6)){
+  if(!gardenTrail){gardenTrail=true;toast('🐾 Среди деревьев обнаружены загадочные следы')}
+  else{gardenClue=true;toast('🗺️ Под беседкой карта: сарай, гараж, теплица и клад!')}
+ }
+ else if(near(-42,-31,7)){shedSearched=true;toast('🧰 В сарае найдена лопатка для раскопок')}
+ else if(near(38,-34,8)){garageSearched=true;toast('🔧 У верстака найден шифр с карты')}
+ else if(near(-40,36,8)){greenhouseSearched=true;toast('🌱 В теплице найдена отметка тайника')}
+ else if(near(-37,43)){if(!dugTreasure){dugTreasure=true;score+=8;sparks(x,.3,z,'hit');sound('hit');toast('⛏️ Клад откопан! +8 🐟')}else toast('Клад уже найден')}
+ else if(near(-50,43)){if(!gnomeSaved){gnomeSaved=true;score+=2;toast('🧙 Садовый гном спасён!')}else toast('Гном уже спасён')}
+ else if(near(-16,48)){if(!ate){toast('Для улик нужна еда из холодильника!');return}buriedFish=true;toast('🕳️ Рыбные улики спрятаны');sparks(x,.3,z,'tear')}
+ else if(near(40,35,8)){saunaVisited=true;energy=Math.min(100,energy+20);toast('♨️ Отдохнул возле бани: +20 энергии')}
+ else if(near(34,8,8)){bathed=true;mood=100;toast('⛲ Искупался у фонтана!')}
+ else if(near(-55,-47,6)){dugBone=true;toast('🦴 Нашёл древнюю кость!')}
+ else if(near(51,48,6)){if(!dugBone){toast('Сначала найди кость!');return}buriedBone=true;toast('🦴 Косточка спрятана!')}
+ else {toast('🧭 Следуй к метке задания · ДЕЙСТВИЕ / X');return}
  updateQuest();setProgress();
 }
 function groom(){if(!playing)return;mood=Math.min(100,mood+3);toast('🧼 Умывание пока без анимации — скелет нового котика не поддерживает её')}
-function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
+function meow(){if(!playing)return;sound('meow');toast('МЯЯУ! 🐈');if(questIndex===quests.length-1&&nearQuest(3,13,5)){storyFinished=true;updateQuest();}if(Math.hypot(cat.position.x-owner.position.x,cat.position.z-owner.position.z)<6)alertness=Math.min(100,alertness+18)}
 function jump(){if(!playing||!grounded||sleeping>0)return;velY=6.7;grounded=false;sound('jump')}
 function toggleView(){viewFirstPerson=!viewFirstPerson;document.getElementById('view').textContent=viewFirstPerson?'🐈 3D-КАМЕРА':'👁️ КАМЕРА';toast(viewFirstPerson?'👁️ Вид от первого лица':'🎥 Камера от третьего лица')}
 function saveGame(notify=false){try{localStorage.setItem('badcat3d-house-v21',JSON.stringify({score,chaos,hunger,energy,mood,questIndex,ate,scratched,slept,escaped,streetKnocks,dugTreasure,buriedFish,boughtMilk,bathed,gnomeSaved,dugBone,buriedBone,neighborSlept,parkScratched,marketFood,cat:[cat.position.x,cat.position.y,cat.position.z]}));if(notify)toast('💾 Прогресс сохранён')}catch(e){if(notify)toast('⚠️ Не удалось сохранить')}}
@@ -1562,7 +1603,7 @@ renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointer
    moveEditedSafely(editSelected,()=>{editSelected.holder.position.x=hit.x+editOffset.x;editSelected.holder.position.z=hit.z+editOffset.z;});
   }}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
 for(const name of ['pointerup','pointercancel'])renderer.domElement.addEventListener(name,e=>{if(dragging===e.pointerId)dragging=null;if(editPointer===e.pointerId){editPointer=null;editDragMode=null;saveFurniture()}});
-document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.body.classList.add('game-started');document.getElementById('start').style.display='none';toast('🏘️ 16 соседских домов! Выход через ворота (+Z), X — задания')};
+document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.body.classList.add('game-started');document.getElementById('start').style.display='none';toast('🐾 Добро пожаловать! Следуй к метке на миникарте')};
 document.getElementById('reset').onclick=()=>{localStorage.removeItem('badcat3d-v16');localStorage.removeItem('badcat3d-v15');localStorage.removeItem('badcat3d-v13');localStorage.removeItem('badcat3d-v04');location.reload()};
 const fps=document.createElement('div');fps.style.cssText='position:fixed;right:12px;bottom:8px;z-index:4;background:#263344c4;color:#fff;padding:5px 10px;border-radius:9px;font:700 12px system-ui;pointer-events:none';fps.textContent='⚡ FPS';document.body.append(fps);
 let fpsFrames=0,fpsSum=0;const clock=new THREE.Clock(),ray=new THREE.Raycaster();
@@ -1633,7 +1674,7 @@ function drawMap(){
  c.strokeStyle='#886d50';c.lineWidth=2;c.strokeRect(xx(-68),zz(-68),136*scale,136*scale);
  c.fillStyle='#cdb99e';for(const b of estateBuildings)c.fillRect(xx(b.x-b.w/2),zz(b.z-b.d/2),b.w*scale,b.d*scale);
  c.fillStyle='#f0d2b9';c.fillRect(xx(-11),zz(-9),22*scale,18*scale);
- const q=quests[questIndex];if(q){const x=xx(q.at[0]),z=zz(q.at[1]);c.strokeStyle='#fff';c.lineWidth=2;c.fillStyle='#e15b43';c.beginPath();c.arc(x,z,7,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#fff';c.font='bold 11px system-ui';c.textAlign='center';c.fillText('!',x,z+4)}
+ const q=quests[questIndex];if(q){const at=questTarget(q),x=xx(at[0]),z=zz(at[1]);c.strokeStyle='#fff';c.lineWidth=2;c.fillStyle='#e15b43';c.beginPath();c.arc(x,z,7,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#fff';c.font='bold 11px system-ui';c.textAlign='center';c.fillText('!',x,z+4)}
  c.save();c.translate(S/2,S/2);c.rotate(-cat.rotation.y);c.fillStyle='#222';c.beginPath();c.moveTo(0,9);c.lineTo(-7,-6);c.lineTo(7,-6);c.closePath();c.fill();c.strokeStyle='white';c.lineWidth=2;c.stroke();c.restore();
 }
 mapCanvas.parentElement.addEventListener('pointerdown',e=>{e.stopPropagation();mapBig=!mapBig;mapCanvas.parentElement.classList.toggle('large',mapBig)});
