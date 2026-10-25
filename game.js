@@ -38,6 +38,34 @@ function refreshEditBounds(piece){
  }
  if(piece.surface){piece.surface.x1=bb.min.x;piece.surface.x2=bb.max.x;piece.surface.z1=bb.min.z;piece.surface.z2=bb.max.z;piece.surface.y=Math.min(bb.max.y,piece.holder.position.y+piece.seatHeight);}
 }
+// Editor collision guard: test the entire rotated model's world-space AABB
+// against actual architectural wall colliders. A failed move restores its old pose.
+function canPlaceEdited(piece){
+ if(!piece||piece.removed)return true;
+ piece.holder.updateMatrixWorld(true);
+ const bb=new THREE.Box3().setFromObject(piece.holder);
+ if(bb.min.x < -67.6 || bb.max.x > 67.6 || bb.min.z < -67.6 || bb.max.z > 67.6)return false;
+ const pad=.018;
+ for(const wall of colliders){
+   if(wall.source!=='wall')continue;
+   if(bb.max.y<=wall.y1+pad||bb.min.y>=wall.y2-pad)continue;
+   if(bb.max.x>wall.x1+pad&&bb.min.x<wall.x2-pad&&bb.max.z>wall.z1+pad&&bb.min.z<wall.z2-pad)return false;
+ }
+ return true;
+}
+function moveEditedSafely(piece,changePose){
+ if(!piece)return false;
+ const prev=piece.holder.position.clone(),rot=piece.holder.rotation.y;
+ changePose();
+ if(!canPlaceEdited(piece)){
+  piece.holder.position.copy(prev);piece.holder.rotation.y=rot;
+  toast('🚧 Здесь стена или граница участка');
+  return false;
+ }
+ piece.level=piece.holder.position.y;piece.floorY=piece.level;
+ refreshEditBounds(piece);if(editHelper)editHelper.update();syncEditorLabel();
+ return true;
+}
 function saveFurniture(){const all={};for(const [id,p] of editablePieces){all[id]={pos:[p.holder.position.x,p.holder.position.y,p.holder.position.z],rot:p.holder.rotation.y,hidden:!!p.removed};}localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(all));}
 
 const F=3.55, CAT_RADIUS=.30, HUMAN_RADIUS=.35;
@@ -523,14 +551,15 @@ let editCamTarget=new THREE.Vector3(0,1.4,0),editCamYaw=.6,editCamPitch=.55,edit
 let editorOn=false,editSelected=null,editHelper=null,editPointer=null,editPlane=new THREE.Plane(),editOffset=new THREE.Vector3(),editHits=new THREE.Raycaster();
 function syncEditorLabel(){document.getElementById('edSelected').textContent=editSelected?`${editSelected.description} · X ${editSelected.holder.position.x.toFixed(1)} · Z ${editSelected.holder.position.z.toFixed(1)} · Y ${editSelected.holder.position.y.toFixed(1)}`:'Нажми на любую мебель в сцене';}
 function pickEdit(item){editSelected=item;if(editHelper){scene.remove(editHelper);editHelper.geometry.dispose();editHelper.material.dispose();editHelper=null;}if(item){editHelper=new THREE.BoxHelper(item.holder,0xffd543);scene.add(editHelper)}syncEditorLabel();}
-function toggleEditor(force){editorOn=typeof force==='boolean'?force:!editorOn;editorPanel.style.display=editorOn?'block':'none';editorButton.textContent=editorOn?'✅ Закончить':'🛠️ Мебель';if(!editorOn){pickEdit(null);editPointer=null;saveFurniture();}else{editCamTarget.set(cat.position.x,cat.position.y+1.2,cat.position.z);editCamDistance=11;for(const k in keys)keys[k]=false;stick.x=stick.y=0;toast('🛠️ Выбери предмет мышью / пальцем');}}
+function toggleEditor(force){editorOn=typeof force==='boolean'?force:!editorOn;editorPanel.style.display=editorOn?'block':'none';editorButton.textContent=editorOn?'✅ Закончить':'🛠️ Мебель';if(!editorOn){pickEdit(null);editPointer=null;saveFurniture();}else{// Free camera starts at its current independent world pose, never attached to the cat.
+editCamTarget.copy(camera.position).add(new THREE.Vector3(Math.sin(editCamYaw)*8,0,Math.cos(editCamYaw)*8));editCamDistance=8;for(const k in keys)keys[k]=false;stick.x=stick.y=0;toast('🛠️ Выбери предмет мышью / пальцем');}}
 document.getElementById('edCameraMode').onclick=()=>{editCameraMode=!editCameraMode;document.getElementById('edCameraMode').textContent=editCameraMode?'✋ Перемещение камеры':'📷 Камера';};
-document.getElementById('edFocus').onclick=()=>{if(editSelected)editCamTarget.copy(editSelected.holder.position).add(new THREE.Vector3(0,1,0));else editCamTarget.copy(cat.position).add(new THREE.Vector3(0,1,0));};
+document.getElementById('edFocus').onclick=()=>{if(editSelected)editCamTarget.copy(editSelected.holder.position).add(new THREE.Vector3(0,1,0));else editCamTarget.set(0,1.8,0);};
 document.getElementById('edTop').onclick=()=>{editCamPitch=1.43;editCamDistance=17;};
 renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
 renderer.domElement.addEventListener('wheel',e=>{if(editorOn){e.preventDefault();editCamDistance=THREE.MathUtils.clamp(editCamDistance*Math.exp(e.deltaY*.001),1.8,90)}},{passive:false});
 editorButton.onclick=()=>toggleEditor();document.getElementById('edToggle').onclick=()=>toggleEditor(false);
-function moveEdit(dx,dz,dy=0,rot=0){if(!editSelected)return;const p=editSelected.holder.position;p.x+=dx;p.z+=dz;p.y=Math.max(0,p.y+dy);editSelected.holder.rotation.y+=rot;editSelected.level=editSelected.holder.position.y;editSelected.floorY=editSelected.level;refreshEditBounds(editSelected);if(editHelper)editHelper.update();syncEditorLabel();}
+function moveEdit(dx,dz,dy=0,rot=0){if(!editSelected)return;moveEditedSafely(editSelected,()=>{const p=editSelected.holder.position;p.x+=dx;p.z+=dz;p.y=Math.max(0,p.y+dy);editSelected.holder.rotation.y+=rot;});}
 for(const [id,dx,dz,dy,rot] of [['edLeft',-.25,0,0,0],['edRight',.25,0,0,0],['edForward',0,-.25,0,0],['edBack',0,.25,0,0],['edUp',0,0,F,0],['edDown',0,0,-F,0],['edRotL',0,0,0,-Math.PI/12],['edRotR',0,0,0,Math.PI/12]])document.getElementById(id).onclick=()=>moveEdit(dx,dz,dy,rot);
 document.getElementById('edSave').onclick=()=>{saveFurniture();toast('💾 Расстановка сохранена в браузере!')};
 document.getElementById('edRemove').onclick=()=>{if(!editSelected)return;editSelected.removed=true;editSelected.holder.visible=false;refreshEditBounds(editSelected);pickEdit(null);saveFurniture()};
@@ -643,7 +672,7 @@ loadGame();
 for(const [id,action] of [['jump',jump],['swat',()=>chaosAction('knock')],['scratch',()=>chaosAction('scratch')],['tear',()=>chaosAction('tear')],['eat',stealFood],['sleep',goSleep],['meow',meow],['groom',groom],['view',toggleView],['use',questInteract]]){
  document.getElementById(id).addEventListener('pointerdown',e=>{e.preventDefault();action()});
 }
-addEventListener('keydown',e=>{if(editorOn){if(e.key==='Escape')toggleEditor(false);return;}const key=e.key.toLowerCase();if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(key))e.preventDefault();
+addEventListener('keydown',e=>{if(editorOn){if(e.key==='Escape'){toggleEditor(false);return;}const key=e.key.toLowerCase();if(['w','a','s','d','q','e','shift','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){keys[key]=true;e.preventDefault();}return;}const key=e.key.toLowerCase();if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(key))e.preventDefault();
  if(!keys[key]){if(e.code==='Space')jump();if(key==='e')chaosAction('knock');if(key==='f')chaosAction('scratch');if(key==='r')chaosAction('tear');
   if(key==='g'||key==='c'||key==='o')stealFood();if(key==='x')questInteract();if(key==='h')goSleep();if(key==='m')meow();if(key==='u')groom();if(key==='v')toggleView();
   if(key==='q'){camOrbit=0;camPitch=.15}if(key==='p')saveGame(true);if(key==='b'){collisionVisuals.visible=!collisionVisuals.visible;toast(collisionVisuals.visible?'🟩 Показаны реальные хитбоксы':'🐾 Хитбоксы скрыты')}
@@ -660,7 +689,7 @@ joy.addEventListener('pointermove',e=>{e.preventDefault();if(e.pointerId===joyPo
 for(const name of ['pointerup','pointercancel'])joy.addEventListener(name,e=>{if(e.pointerId===joyPointer){joyPointer=null;stick.x=stick.y=0;nub.style.transform=''}});
 let dragging=null,oldX=0,oldY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{e.preventDefault();if(editorOn){editLastX=e.clientX;editLastY=e.clientY;editPointer=e.pointerId;editDragMode=(e.button===2||editCameraMode)?'orbit':e.button===1?'pan':'object';if(editDragMode==='object'){selectFromPointer(e);if(editSelected){editPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0),editSelected.holder.position);editRay(e);const hit=new THREE.Vector3();if(editHits.ray.intersectPlane(editPlane,hit))editOffset.copy(editSelected.holder.position).sub(hit)}else editDragMode='orbit';}renderer.domElement.setPointerCapture(e.pointerId);return;}dragging=e.pointerId;oldX=e.clientX;oldY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
-renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointerId!==editPointer)return;const dx=e.clientX-editLastX,dy=e.clientY-editLastY;editLastX=e.clientX;editLastY=e.clientY;if(editDragMode==='orbit'){editCamYaw-=dx*.006;editCamPitch=THREE.MathUtils.clamp(editCamPitch+dy*.006,-.1,1.49)}else if(editDragMode==='pan'){const speed=editCamDistance*.002;editCamTarget.x-=Math.cos(editCamYaw)*dx*speed;editCamTarget.z+=Math.sin(editCamYaw)*dx*speed;editCamTarget.y+=dy*speed;}else if(editDragMode==='object'&&editSelected){editRay(e);const hit=new THREE.Vector3();if(editHits.ray.intersectPlane(editPlane,hit)){editSelected.holder.position.x=hit.x+editOffset.x;editSelected.holder.position.z=hit.z+editOffset.z;refreshEditBounds(editSelected);if(editHelper)editHelper.update();syncEditorLabel()}}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
+renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointerId!==editPointer)return;const dx=e.clientX-editLastX,dy=e.clientY-editLastY;editLastX=e.clientX;editLastY=e.clientY;if(editDragMode==='orbit'){editCamYaw-=dx*.006;editCamPitch=THREE.MathUtils.clamp(editCamPitch+dy*.006,-.1,1.49)}else if(editDragMode==='pan'){const speed=editCamDistance*.002;editCamTarget.x-=Math.cos(editCamYaw)*dx*speed;editCamTarget.z+=Math.sin(editCamYaw)*dx*speed;editCamTarget.y+=dy*speed;}else if(editDragMode==='object'&&editSelected){editRay(e);const hit=new THREE.Vector3();if(editHits.ray.intersectPlane(editPlane,hit)){moveEditedSafely(editSelected,()=>{editSelected.holder.position.x=hit.x+editOffset.x;editSelected.holder.position.z=hit.z+editOffset.z;})}}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
 for(const name of ['pointerup','pointercancel'])renderer.domElement.addEventListener(name,e=>{if(dragging===e.pointerId)dragging=null;if(editPointer===e.pointerId){editPointer=null;editDragMode=null;saveFurniture()}});
 document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.getElementById('start').style.display='none';toast('🏘️ 16 соседских домов! Выход через ворота (+Z), X — задания')};
 document.getElementById('reset').onclick=()=>{localStorage.removeItem('badcat3d-v16');localStorage.removeItem('badcat3d-v15');localStorage.removeItem('badcat3d-v13');localStorage.removeItem('badcat3d-v04');location.reload()};
