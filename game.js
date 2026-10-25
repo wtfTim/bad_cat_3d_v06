@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
-import {STORY_QUESTS,STORY_PLACES} from './quests_story.js?v=1';
+import {STORY_QUESTS,STORY_PLACES} from './quests_story.js?v=2';
 
 // BAD CAT 3D v1.7: the only collision sources are architectural walls and the
 // furniture models actually loaded into the scene. Old invisible furniture is gone.
@@ -358,7 +358,7 @@ function showStoryJournal(){
  const lines=storyJournal.slice(-15).reverse().map(e=>'• '+e.title+'\n'+e.body);
  showStoryDialog('📓 Дневник расследования',(q?'Текущая задача: '+q.title+'\n\n':'')+(lines.length?lines.join('\n\n'):'Улик пока нет. Найди первую записку в парке.'));
 }
-// Garage stray NPC (Iскра) is separate from the 416-piece furniture layout.
+// Garage stray NPC (Iскра) is separate from the 629-piece furniture layout.
 const strayCat=new THREE.Group();house.add(strayCat);
 strayCat.position.set(40.2,0,-35.8);
 const strayFur=material('#c38e69'),strayDark=material('#5b4138'),strayEye=material('#efc85d');
@@ -400,7 +400,7 @@ function groundSupport(x,z,feet,prev){let best=0;
   if(s.y<=prev+.18&&s.y>best)best=s.y;
  }
  // Use actual geometry for seats rather than an approximation based on the model's bounding box.
- // Only test visible, nearby seating pieces; the 416-object catalog is not raycast every frame.
+ // Only test visible, nearby seating pieces; the 629-object catalog is not raycast every frame.
  for(const p of editablePieces.values()){
   if(!p.surface||p.surface.fullTop||p.removed||!p.holder.visible)continue;
   const b=p.bounds;
@@ -1448,7 +1448,7 @@ async function loadExtras(){
    throw Error('Не загружен assets/extra_catalog.json: недоступны дополнительные модели');
   }
   // Process model instances in a bounded parallel queue instead of waiting
-  // for 416 separate requests one by one. The GLTF loaders already cache
+  // for 629 separate requests one by one. The GLTF loaders already cache
   // promises for repeated model names; all original IDs/poses stay unchanged.
   const workers=Math.min(customEntries.length,
    /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)?6:12);
@@ -1498,7 +1498,7 @@ document.getElementById('edImportFile').onchange=async e=>{
  }catch(err){toast('⚠️ Неверный файл JSON мебели/стен');console.error(err)}
 };
 document.getElementById('edReset').onclick=()=>{
- if(!confirm('Восстановить твою сохранённую в проекте расстановку (416 объектов)? Текущие перемещения заменятся, прогресс квестов останется.'))return;
+ if(!confirm('Восстановить твою сохранённую в проекте расстановку (629 объектов)? Текущие перемещения заменятся, прогресс квестов останется.'))return;
  const before=localStorage.getItem(EDIT_SAVE_KEY),extras=localStorage.getItem(EDIT_SAVE_KEY+'-extras');
  if(before)localStorage.setItem(EDIT_SAVE_KEY+'-before-reset',before);
  if(extras)localStorage.setItem(EDIT_SAVE_KEY+'-extras-before-reset',extras);
