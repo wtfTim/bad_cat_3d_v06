@@ -451,7 +451,7 @@ async function placeGarden(entry,id){const [pack,name,label,x,z,w,d,h,yaw,action
 // In-browser layout editor: choose furniture, drag on the floor plane, rotate and save.
 const editorPanel=document.createElement('section');editorPanel.id='furnitureEditor';
 editorPanel.innerHTML=`<header>🛠️ Редактор мира <button id="edToggle">Закрыть</button></header>
- <div class="edSmall">🖱️ ЛКМ по предмету — выбрать/перетащить. ПКМ — вращать камеру. Средняя кнопка — двигать камеру. Колесо — приближать. WASD — перемещать камеру, Q/E — вниз/вверх, Shift — быстрее. На телефоне: режим «Камера» для свайпа и два пальца для зума.</div>
+ <div class="edSmall">🖱️ ЛКМ по предмету — выбрать/перетащить. ПКМ — вращать камеру. Средняя кнопка — двигать камеру. Колесо — приближать. WASD — перемещать камеру, Пробел/E — вверх, Q — вниз, Shift — быстрее. На телефоне: режим «Камера» для свайпа и два пальца для зума.</div>
  <div class="edLine"><button id="edCameraMode">📷 Камера</button><button id="edFocus">🎯 К предмету</button><button id="edTop">⬇ Вид сверху</button></div>
  <div id="edSelected">Предмет не выбран</div>
  <div class="edLine"><button id="edLeft">←</button><button id="edForward">↑</button><button id="edBack">↓</button><button id="edRight">→</button><button id="edRotL">↶</button><button id="edRotR">↷</button></div>
@@ -832,7 +832,7 @@ addEventListener('keydown',e=>{
  const key=gameInputKey(e);
  if(editorOn){
   if(e.code==='Escape'){toggleEditor(false);return}
-  if(['w','a','s','d','q','e','shift','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){keys[key]=true;e.preventDefault()}
+  if(['w','a','s','d','q','e',' ','shift','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){keys[key]=true;e.preventDefault()}
   return;
  }
  if([' ','w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key))e.preventDefault();
@@ -898,7 +898,7 @@ function updateCamera(dt){if(editorOn){
  if(keys.s||keys.arrowdown)editCamTarget.addScaledVector(forward,-speed);
  if(keys.a||keys.arrowleft)editCamTarget.addScaledVector(right,-speed);
  if(keys.d||keys.arrowright)editCamTarget.addScaledVector(right,speed);
- if(keys.q)editCamTarget.y-=speed;if(keys.e)editCamTarget.y+=speed;
+ if(keys.q)editCamTarget.y-=speed;if(keys.e||keys[' '])editCamTarget.y+=speed;
  editCamTarget.y=THREE.MathUtils.clamp(editCamTarget.y,.3,30);
  camera.position.set(editCamTarget.x-Math.sin(editCamYaw)*Math.cos(editCamPitch)*editCamDistance,editCamTarget.y+Math.sin(editCamPitch)*editCamDistance,editCamTarget.z-Math.cos(editCamYaw)*Math.cos(editCamPitch)*editCamDistance);camera.lookAt(editCamTarget);
  if(catModel)catModel.visible=true;fallback.visible=!catModel;return;
