@@ -593,7 +593,24 @@ async function addCatalogItem(key,restore=null,id=null){
  if(!key.includes(':'))key='tiny:'+key;
  const [pack,name]=key.split(':');const match=name.toLowerCase(),decor=/art|mirror|carpet|rug|flower|grass|road|path|paving|tile/.test(match),small=/lamp|bookends|flower|grass|rock_small|wrench|shovel|hammer|toolbox/.test(match),seat=/chair|pouffe|loveseat|sitting|sofa/.test(match),bed=/bed/.test(match),tree=/tree|birch|pine|palm/.test(match),road=pack==='roads'||/path|road|paving/.test(match);
  const w=road?4:tree?3.7:small?.65:bed?2.7:seat?1.9:decor?1.2:/fridge|cabinet|bookcase|shelf|chest|dresser|rack/.test(match)?1.35:1.8,d=road?4:tree?3.6:small?.65:bed?2.65:seat?1.3:decor?.9:1.2,h=road?.38:tree?4.8:small?.8:bed?1.5:decor?.95:1.65;
- const floor=restore?.pos?.[1]??(cat.position.y>F-1.1?F:0),x=restore?.pos?.[0]??(editorOn?editCamTarget.x:cat.position.x+2),z=restore?.pos?.[2]??(editorOn?editCamTarget.z:cat.position.z+2);
+ // New additions spawn ahead of the actual camera, not at the distant orbit target.
+ // Restore and starter positions remain completely unchanged.
+ const cameraSpawn=!restore&&editorOn;
+ let spawnX=cat.position.x+2,spawnY=cat.position.y>F-1.1?F:0,spawnZ=cat.position.z+2;
+ if(cameraSpawn){
+  camera.updateMatrixWorld(true);
+  const look=new THREE.Vector3();camera.getWorldDirection(look);
+  const horizontal=new THREE.Vector3(look.x,0,look.z);
+  if(horizontal.lengthSq()<.0001)horizontal.set(Math.sin(editCamYaw),0,Math.cos(editCamYaw));
+  horizontal.normalize();
+  const toward=new THREE.Raycaster(camera.position,horizontal,0,4.5);
+  const wall=editorWallDistance(toward);
+  const distance=THREE.MathUtils.clamp(wall-.85,1.2,2.8);
+  spawnX=camera.position.x+horizontal.x*distance;
+  spawnZ=camera.position.z+horizontal.z*distance;
+  spawnY=Math.max(0,camera.position.y-.65);
+ }
+ const floor=restore?.pos?.[1]??spawnY,x=restore?.pos?.[0]??spawnX,z=restore?.pos?.[2]??spawnZ;
  const editId=id||'custom-'+(++customIndex);let piece;
  if(pack==='tiny')piece=await placeTiny([name,x,z,floor,w,d,h,restore?.rot||0,seat?'chair':bed?'bed':'solid','scratch',!decor],editId);
  else if(pack==='kenney')piece=await place([name,x,z,floor,w,d,h,restore?.rot||0,seat?'chair':bed?'bed':decor?'decor':'solid',decor?'knock':'scratch'],editId);
@@ -605,7 +622,20 @@ document.getElementById('edExport').onclick=exportFurniture;
 let customEntries=[];
 const originalAdd=addCatalogItem;
 // Track chosen models so custom furniture can be restored on reload and imported elsewhere.
-document.getElementById('edAdd').onclick=async()=>{try{if(!catalog.value){toast('🔎 Сначала выбери предмет');return}const id='custom-'+(++customIndex),name=catalog.value;const piece=await addCatalogItem(name,null,id);customEntries.push({id,name});pickEdit(piece);saveFurniture();persistExtras();toast('🪑 Предмет добавлен — перетащи его')}catch(e){console.error(e);toast('Не удалось загрузить модель')}};
+document.getElementById('edAdd').onclick=async()=>{try{if(!catalog.value){toast('🔎 Сначала выбери предмет');return}const id='custom-'+(++customIndex),name=catalog.value;const piece=await addCatalogItem(name,null,id);
+ // Try nearby positions towards the camera if the initial model would overlap a wall.
+ if(!canPlaceEdited(piece)&&editorOn){
+  const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
+  const at=piece.holder.position.clone();
+  let placed=false;
+  for(const back of [.4,.8,1.2,1.6,2]){
+   piece.holder.position.set(at.x-forward.x*back,at.y,at.z-forward.z*back);
+   if(canPlaceEdited(piece)){placed=true;break}
+  }
+  if(!placed){piece.holder.position.copy(at);toast('⚠️ Предмет близко к стене — подвинь его')}
+  refreshEditBounds(piece);
+ }
+ customEntries.push({id,name});pickEdit(piece);saveFurniture();persistExtras();toast('🪑 Предмет добавлен — перетащи его')}catch(e){console.error(e);toast('Не удалось загрузить модель')}};
 function persistExtras(){localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(customEntries));}
 
 // Starter layout is stored as ordinary editable custom entries, not fixed 3D geometry.
@@ -736,7 +766,22 @@ document.getElementById('edImportFile').onchange=async e=>{const file=e.target.f
 document.getElementById('edReset').onclick=()=>{if(confirm('Сбросить только расстановку мебели? Прогресс квестов сохранится.')){localStorage.removeItem(EDIT_SAVE_KEY);localStorage.removeItem(EDIT_SAVE_KEY+'-extras');localStorage.setItem(STARTER_KEY,'1');location.reload()}};
 const rayPos=new THREE.Vector2();
 function editRay(event){const rect=renderer.domElement.getBoundingClientRect();rayPos.set(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);editHits.setFromCamera(rayPos,camera)}
-function selectFromPointer(event){editRay(event);const targets=[...editablePieces.values()].filter(p=>!p.removed).map(p=>p.holder);const hits=editHits.intersectObjects(targets,true);if(!hits.length){pickEdit(null);return;}let obj=hits[0].object;while(obj&&!targets.includes(obj))obj=obj.parent;const item=[...editablePieces.values()].find(p=>p.holder===obj);pickEdit(item||null)}
+// Only objects in front of the first solid wall along the pointer ray are selectable.
+function editorWallDistance(raycaster){
+ const walls=raycaster.intersectObjects(wallMeshes,false);
+ return walls.length?walls[0].distance:Infinity;
+}
+function selectFromPointer(event){
+ editRay(event);
+ const pieces=[...editablePieces.values()].filter(p=>!p.removed&&p.holder.visible);
+ const holders=pieces.map(p=>p.holder);
+ const wallDistance=editorWallDistance(editHits);
+ const visibleHit=editHits.intersectObjects(holders,true).find(hit=>hit.distance<wallDistance-.015);
+ if(!visibleHit){pickEdit(null);return}
+ let obj=visibleHit.object;
+ while(obj&&!holders.includes(obj))obj=obj.parent;
+ pickEdit(pieces.find(p=>p.holder===obj)||null);
+}
 const furnitureExtrasReady=()=>loadExtras();
 
 const furnitureJob=Promise.allSettled([]).then(async results=>{
@@ -858,7 +903,12 @@ joy.addEventListener('pointermove',e=>{e.preventDefault();if(e.pointerId===joyPo
 for(const name of ['pointerup','pointercancel'])joy.addEventListener(name,e=>{if(e.pointerId===joyPointer){joyPointer=null;stick.x=stick.y=0;nub.style.transform=''}});
 let dragging=null,oldX=0,oldY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{e.preventDefault();if(editorOn){editLastX=e.clientX;editLastY=e.clientY;editPointer=e.pointerId;editDragMode=(e.button===2||editCameraMode)?'orbit':e.button===1?'pan':'object';if(editDragMode==='object'){selectFromPointer(e);if(editSelected){editPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0),editSelected.holder.position);editRay(e);const hit=new THREE.Vector3();if(editHits.ray.intersectPlane(editPlane,hit))editOffset.copy(editSelected.holder.position).sub(hit)}else editDragMode='orbit';}renderer.domElement.setPointerCapture(e.pointerId);return;}dragging=e.pointerId;oldX=e.clientX;oldY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
-renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointerId!==editPointer)return;const dx=e.clientX-editLastX,dy=e.clientY-editLastY;editLastX=e.clientX;editLastY=e.clientY;if(editDragMode==='orbit'){editCamYaw-=dx*.006;editCamPitch=THREE.MathUtils.clamp(editCamPitch+dy*.006,-.1,1.49)}else if(editDragMode==='pan'){const speed=editCamDistance*.002;editCamTarget.x-=Math.cos(editCamYaw)*dx*speed;editCamTarget.z+=Math.sin(editCamYaw)*dx*speed;editCamTarget.y+=dy*speed;}else if(editDragMode==='object'&&editSelected){editRay(e);const hit=new THREE.Vector3();if(editHits.ray.intersectPlane(editPlane,hit)){moveEditedSafely(editSelected,()=>{editSelected.holder.position.x=hit.x+editOffset.x;editSelected.holder.position.z=hit.z+editOffset.z;})}}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
+renderer.domElement.addEventListener('pointermove',e=>{if(editorOn){if(e.pointerId!==editPointer)return;const dx=e.clientX-editLastX,dy=e.clientY-editLastY;editLastX=e.clientX;editLastY=e.clientY;if(editDragMode==='orbit'){editCamYaw-=dx*.006;editCamPitch=THREE.MathUtils.clamp(editCamPitch+dy*.006,-.1,1.49)}else if(editDragMode==='pan'){const speed=editCamDistance*.002;editCamTarget.x-=Math.cos(editCamYaw)*dx*speed;editCamTarget.z+=Math.sin(editCamYaw)*dx*speed;editCamTarget.y+=dy*speed;}else if(editDragMode==='object'&&editSelected){editRay(e);const hit=new THREE.Vector3();if(editHits.ray.intersectPlane(editPlane,hit)){
+   // A wall before the drag plane blocks movement through that wall.
+   const wallAt=editorWallDistance(editHits);
+   if(wallAt<hit.distanceTo(editHits.ray.origin)-.015)return;
+   moveEditedSafely(editSelected,()=>{editSelected.holder.position.x=hit.x+editOffset.x;editSelected.holder.position.z=hit.z+editOffset.z;});
+  }}return;}if(e.pointerId!==dragging)return;e.preventDefault();camOrbit-=(e.clientX-oldX)*.005;camPitch=THREE.MathUtils.clamp(camPitch+(e.clientY-oldY)*.003,-.25,.33);oldX=e.clientX;oldY=e.clientY});
 for(const name of ['pointerup','pointercancel'])renderer.domElement.addEventListener(name,e=>{if(dragging===e.pointerId)dragging=null;if(editPointer===e.pointerId){editPointer=null;editDragMode=null;saveFurniture()}});
 document.getElementById('play').onclick=()=>{if(!furnitureReady)return;try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}playing=true;document.getElementById('start').style.display='none';toast('🏘️ 16 соседских домов! Выход через ворота (+Z), X — задания')};
 document.getElementById('reset').onclick=()=>{localStorage.removeItem('badcat3d-v16');localStorage.removeItem('badcat3d-v15');localStorage.removeItem('badcat3d-v13');localStorage.removeItem('badcat3d-v04');location.reload()};
