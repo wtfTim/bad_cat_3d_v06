@@ -68,7 +68,23 @@ function moveEditedSafely(piece,changePose){
  refreshEditBounds(piece);if(editHelper)editHelper.update();syncEditorLabel();
  return true;
 }
-function saveFurniture(){const all={};for(const [id,p] of editablePieces){all[id]={pos:[p.holder.position.x,p.holder.position.y,p.holder.position.z],rot:p.holder.rotation.y,scale:p.holder.scale.x,hidden:!!p.removed};}localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(all));}
+function saveFurniture(){
+ // Preserve saved poses when a model is temporarily unavailable.
+ let all={...storedLayout};
+ for(const [id,p] of editablePieces){
+  all[id]={pos:[p.holder.position.x,p.holder.position.y,p.holder.position.z],rot:p.holder.rotation.y,scale:p.holder.scale.x,hidden:!!p.removed};
+ }
+ const previous=localStorage.getItem(EDIT_SAVE_KEY);
+ if(previous){
+  try{
+   const before=JSON.parse(previous);
+   if(Object.keys(before).length>Object.keys(all).length)all={...before,...all};
+   localStorage.setItem(EDIT_SAVE_KEY+'-last-backup',previous);
+  }catch(e){console.warn('Could not back up furniture save',e)}
+ }
+ localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(all));
+ storedLayout=all;
+}
 
 const F=3.55, CAT_RADIUS=.30, HUMAN_RADIUS=.35;
 function addBox(w,h,d,mat,x,y,z,{wall=false,top=false}={}){
@@ -678,7 +694,10 @@ document.getElementById('edAdd').onclick=async()=>{try{if(!catalog.value){toast(
   if(!placed){piece.holder.position.copy(at);toast('⚠️ Предмет близко к стене — подвинь его')}
   refreshEditBounds(piece);
  }
- customEntries.push({id,name});pickEdit(piece);saveFurniture();persistExtras();toast('🪑 Предмет добавлен — перетащи его')}catch(e){console.error(e);toast('Не удалось загрузить модель')}};
+ customEntries.push({id,name});pickEdit(piece);saveFurniture();persistExtras();toast('🪑 Предмет добавлен — перетащи его') }catch(e){
+  console.error('Furniture creation failed:',catalog.value,ALL_CATALOG[catalog.value],e);
+  toast('⚠️ Модель не загрузилась: '+(catalog.value||'неизвестная')+' — смотри F12');
+ }};
 function persistExtras(){localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(customEntries));}
 
 // Furniture clipboard: duplicates are regular editor objects and survive JSON export/reload.
@@ -845,6 +864,7 @@ async function applyStarter({automatic=false}={}){
  toast('🏡 Расставлено '+count+' объектов. Можешь двигать и сохранять их!');
 }
 document.getElementById('edStarter').onclick=()=>applyStarter();
+const missingFurnitureModels=[];
 async function loadExtras(){
  try{
   customEntries=JSON.parse(localStorage.getItem(EDIT_SAVE_KEY+'-extras')||'[]');
@@ -856,9 +876,17 @@ async function loadExtras(){
   for(const c of customEntries){
    const number=Number(c.id.split('-')[1]);if(number>customIndex)customIndex=number;
    try{await addCatalogItem(c.name,storedLayout[c.id],c.id)}
-   catch(e){console.warn('Could not load custom item',c.name,e)}
+   catch(e){
+    console.warn('Could not load custom item',c.name,e);
+    console.error('Model load failed:',c.name,'url:',ALL_CATALOG[c.name]||'(not in catalog)',e);
+    missingFurnitureModels.push(c.name);
+   }
   }
  }catch(e){console.warn('Furniture extras load:',e)}
+ if(missingFurnitureModels.length){
+  console.warn('Missing furniture models:',missingFurnitureModels);
+  toast('⚠️ Не загрузились '+missingFurnitureModels.length+' моделей. Расстановка сохранена; проверь assets/extra и F12');
+ }
 }
 document.getElementById('edImportFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed.layout||typeof parsed.layout!=='object'||!Array.isArray(parsed.custom))throw Error('Invalid format');localStorage.setItem(EDIT_SAVE_KEY,JSON.stringify(parsed.layout));localStorage.setItem(EDIT_SAVE_KEY+'-extras',JSON.stringify(parsed.custom));location.reload()}catch(err){toast('⚠️ Неверный файл JSON');console.error(err)}};
 document.getElementById('edReset').onclick=()=>{if(confirm('Сбросить только расстановку мебели? Прогресс квестов сохранится.')){localStorage.removeItem(EDIT_SAVE_KEY);localStorage.removeItem(EDIT_SAVE_KEY+'-extras');localStorage.setItem(STARTER_KEY,'1');location.reload()}};
